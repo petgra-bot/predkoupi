@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+Disallow: /proverit/
+Sitemap: https://predkoupi.cz/sitemap.xml

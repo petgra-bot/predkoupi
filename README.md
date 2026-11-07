@@ -1,2 +1,3 @@
-# predkoupi
-Web Před koupí (predkoupi.cz) – prověření bytu a domu v Praze před koupí
+# predkoupi.cz
+
+Web služby Před koupí – prověření bytu a domu v Praze před koupí. Provozovatel Petr Grätzer, IČO 19843071.
