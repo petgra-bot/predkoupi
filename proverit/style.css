@@ -71,3 +71,22 @@ footer { margin-top: 32px; }
 .och-znacka.zam { background: transparent; color: var(--tlumene); border: 1px solid var(--linka); }
 .och-zamceno th, .och-zamceno td { color: var(--tlumene); }
 @media (max-width: 560px) { .och-tabulka tr { display: grid; grid-template-columns: auto 1fr; } .och-tabulka td:last-child { grid-column: 1 / -1; border-top: 0; padding-top: 0; } }
+
+/* Sbalovací karty (identifikace, přehled zdarma) */
+.sbal > summary { list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 12px; touch-action: manipulation; }
+.sbal > summary::-webkit-details-marker { display: none; }
+.hlavicka-sbal { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.hlavicka-sbal h2 { margin: 0; }
+.shrnuti { font-size: .9rem; color: var(--tlumene); }
+.prepinac { flex: none; display: inline-flex; align-items: center; gap: 6px; font-size: .8rem; font-weight: 600; color: var(--text);
+  border: 1px solid var(--linka); padding: 6px 10px; white-space: nowrap; }
+.prepinac::before { content: "Podrobnosti"; }
+.ochutnavka > summary .prepinac::before { content: "Rozbalit"; }
+.sbal[open] > summary .prepinac::before { content: "Sbalit"; }
+.prepinac::after { content: ""; width: 7px; height: 7px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(45deg) translateY(-2px); transition: transform .2s; }
+.sbal[open] > summary .prepinac::after { transform: rotate(-135deg) translateY(-2px); }
+@media (hover: hover) and (pointer: fine) { .sbal > summary:hover .prepinac { background: var(--pozadi); } }
+.sbal[open] > summary { margin-bottom: 12px; }
+.och-karta { border-left-color: var(--firma); --c: var(--firma); }
+.och-karta .ochutnavka { margin-top: 0; }
+.och-karta h2 { color: var(--text); }

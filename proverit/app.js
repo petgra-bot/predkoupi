@@ -364,13 +364,20 @@ async function zobrazBudovu(adresa, inz, puvod) {
     : "";
   const tabulka = `<dl>${radky.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("")}</dl>`;
   const nadpis = typ === "jiná stavba" ? "Tento typ stavby zatím neprověřujeme" : "Nemovitost je identifikovaná";
-  $("vysledek").innerHTML = karta(typ === "jiná stavba" ? "upresnit" : "ok", nadpis,
-    tabulka + upozorneni.map((u) => `<p class="poznamka">${esc(u)}</p>`).join("") + dalsi +
-    (alternativy.length ? `<div class="alternativy tlumene">Není to on? ${alternativy.map((a, i) =>
-      `<button type="button" data-alt="${i}">${esc(a.adresa.split(",")[0])}</button>`).join("")}</div>` : "") +
-    (typ === "jiná stavba" ? "" : (/Praha/.test(adresa.adresa) ? `<div id="ochutnavka"></div>` : "") + `<div class="co-dal"><h3>Co dál</h3>
+  const jina = typ === "jiná stavba";
+  // Údaje o budově sbalené pod jedním řádkem (adresa a typ); upozornění a „Není to on?“ zůstávají vidět.
+  $("vysledek").innerHTML = `<div class="karta ${jina ? "upresnit" : "ok"}">
+      <details class="sbal"${jina ? " open" : ""}>
+        <summary><span class="hlavicka-sbal"><h2>${esc(nadpis)}</h2><span class="shrnuti">${esc(adresa.adresa.split(",").slice(0, 2).join(","))} · ${esc(typ)}</span></span><span class="prepinac" aria-hidden="true"></span></summary>
+        ${tabulka}${dalsi}
+      </details>
+      ${upozorneni.map((u) => `<p class="poznamka">${esc(u)}</p>`).join("")}
+      ${alternativy.length ? `<div class="alternativy tlumene">Není to on? ${alternativy.map((a, i) =>
+        `<button type="button" data-alt="${i}">${esc(a.adresa.split(",")[0])}</button>`).join("")}</div>` : ""}
+    </div>` +
+    (jina ? "" : (/Praha/.test(adresa.adresa) ? `<div id="ochutnavka" class="karta och-karta"></div>` : "") + `<div class="co-dal"><h3>Co dál</h3>
       <p>Objednávky Prověrky (790 Kč) a Prověrky PLUS (1 290 Kč) spouštíme v nejbližších týdnech.</p>
-      <p><a href="/#ceny">Co obsahuje Prověrka a PLUS</a> · <a href="mailto:info@predkoupi.cz?subject=Zájem o Prověrku">Napište nám, dáme vědět při spuštění</a></p></div>`));
+      <p><a href="/#ceny">Co obsahuje Prověrka a PLUS</a> · <a href="mailto:info@predkoupi.cz?subject=Zájem o Prověrku">Napište nám, dáme vědět při spuštění</a></p></div>`);
   if ($("ochutnavka")) ochutnavka(adresa.so, $("ochutnavka"));
   $("vysledek").querySelectorAll("button[data-alt]").forEach((btn) => btn.addEventListener("click", () =>
     zobrazBudovu(alternativy[+btn.dataset.alt], inz, { jak: "vybráno z nabídky", jistota: "jistá" }).catch(chyba)));

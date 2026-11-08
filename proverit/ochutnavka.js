@@ -194,8 +194,10 @@ async function ochutnavka(soKod, cil) {
     const obr = `${OCH.ORTOFOTO}/export?bbox=${bbox.join(",")}&bboxSR=5514&imageSR=5514&size=700,500&format=jpg&f=image`;
     const sx = (x) => ((x - bbox[0]) / w * 700).toFixed(1), sy = (y) => ((bbox[3] - y) / h * 500).toFixed(1);
     const obrys = dum.map((r) => `<polygon points="${r.map(([x, y]) => `${sx(x)},${sy(y)}`).join(" ")}" fill="none" stroke="#fff" stroke-width="3"/>`).join("");
-    cil.innerHTML = `<div class="ochutnavka">
-      <h2>Přehled zdarma</h2>
+    const pocty = ["cervena", "oranzova", "zelena", "seda"].map((k) => [k, oblasti.filter((x) => x.barva === k).length]).filter(([, n]) => n);
+    const shrnuti = pocty.map(([k, n]) => `${n}× ${OCH_STAV[k].toLowerCase()}`).join(" · ");
+    cil.innerHTML = `<details class="sbal ochutnavka" open>
+      <summary><span class="hlavicka-sbal"><h2>Přehled zdarma</h2><span class="shrnuti">${shrnuti}</span></span><span class="prepinac" aria-hidden="true"></span></summary>
       <figure class="och-snimek"><img src="${obr}" alt="Letecký snímek okolí domu" width="700" height="500" loading="lazy">
         <svg viewBox="0 0 700 500" aria-hidden="true">${obrys}</svg><figcaption>Letecký snímek ČÚZK, bíle obrys domu.</figcaption></figure>
       <table class="och-tabulka"><tbody>
@@ -205,7 +207,7 @@ async function ochutnavka(soKod, cil) {
         <tr class="och-zamceno"><th scope="row">Co udělat</th><td><span class="och-znacka zam">v Prověrce</span></td><td>Verdikt jednou větou a úkoly na míru před rezervací, podpisem a převodem.</td></tr>
       </tbody></table>
       <p class="tlumene">Hotovo za ${s} s z veřejných map (Geoportál hl. m. Prahy, ČGS, IPR Praha, ČÚZK) k dnešnímu dni. Orientační přehled pro celý dům; plná Prověrka posuzuje i pozemky, zdroje hluku a výšku nad hladinou. Není to právní ani znalecký posudek.</p>
-    </div>`;
+    </details>`;
   } catch (e) {
     cil.innerHTML = `<p class="poznamka">Přehled se teď nepodařilo načíst (${esc(e.message)}). Zkuste to prosím za chvíli znovu.</p>`;
   }
