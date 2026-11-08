@@ -55,3 +55,19 @@ footer { margin-top: 32px; }
 .co-dal { margin-top: 18px; padding: 14px 16px; background: var(--pozadi); border: 1px solid var(--linka); }
 .co-dal h3 { margin: 0 0 6px; font-size: 1rem; }
 .co-dal p { margin: 6px 0 0; }
+
+/* Ochutnávka zdarma */
+.ochutnavka { margin-top: 20px; }
+.ochutnavka h2 { font-size: 1.15rem; margin: 0 0 10px; }
+.och-snimek { position: relative; margin: 0 0 12px; }
+.och-snimek img, .och-snimek svg { display: block; width: 100%; height: auto; }
+.och-snimek svg { position: absolute; inset: 0; }
+.och-snimek figcaption { font-size: .8rem; color: var(--tlumene); margin-top: 4px; }
+.och-tabulka { width: 100%; border-collapse: collapse; font-size: .92rem; }
+.och-tabulka th, .och-tabulka td { text-align: left; vertical-align: top; padding: 8px 6px; border-top: 1px solid var(--linka); }
+.och-tabulka th { font-weight: 600; white-space: nowrap; }
+.och-znacka { display: inline-block; font-size: .72rem; font-weight: 700; padding: 2px 7px; color: #fff; white-space: nowrap; }
+.och-znacka.zelena { background: #2e7d4f; } .och-znacka.oranzova { background: #a85a0c; } .och-znacka.cervena { background: #b83232; } .och-znacka.seda { background: #59607a; }
+.och-znacka.zam { background: transparent; color: var(--tlumene); border: 1px solid var(--linka); }
+.och-zamceno th, .och-zamceno td { color: var(--tlumene); }
+@media (max-width: 560px) { .och-tabulka tr { display: grid; grid-template-columns: auto 1fr; } .och-tabulka td:last-child { grid-column: 1 / -1; border-top: 0; padding-top: 0; } }
