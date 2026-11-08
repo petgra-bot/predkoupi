@@ -377,7 +377,7 @@ async function zobrazBudovu(adresa, inz, puvod) {
     </div>` +
     (jina ? "" : (/Praha/.test(adresa.adresa) ? `<div id="ochutnavka" class="karta och-karta"></div>` : "") + `<div class="co-dal"><h3>Co dál</h3>
       <p>Objednávky Prověrky (790 Kč) a Prověrky PLUS (1 290 Kč) spouštíme v nejbližších týdnech.</p>
-      <p><a href="/#ceny">Co obsahuje Prověrka a PLUS</a> · <a href="mailto:info@predkoupi.cz?subject=Zájem o Prověrku">Napište nám, dáme vědět při spuštění</a></p></div>`);
+      <div class="akce"><a class="tl tmave-tl" href="/#ceny">Co obsahuje Prověrka</a><a class="tl obrys-tmave" href="mailto:info@predkoupi.cz?subject=Zájem o Prověrku">Dát vědět při spuštění</a></div></div>`);
   if ($("ochutnavka")) ochutnavka(adresa.so, $("ochutnavka"));
   $("vysledek").querySelectorAll("button[data-alt]").forEach((btn) => btn.addEventListener("click", () =>
     zobrazBudovu(alternativy[+btn.dataset.alt], inz, { jak: "vybráno z nabídky", jistota: "jistá" }).catch(chyba)));

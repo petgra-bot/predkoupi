@@ -1,36 +1,50 @@
 <!doctype html>
 <html lang="cs">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="robots" content="noindex, nofollow">
-  <title>Přehled nemovitosti zdarma | Před koupí</title>
-  <link rel="stylesheet" href="style.css?v=9">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1e2645">
+<meta name="color-scheme" content="dark">
+<meta name="robots" content="noindex, nofollow">
+<title>Přehled nemovitosti zdarma | Před koupí</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styl.css?v=9">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="proverit.css?v=3">
 </head>
-<body>
-  <main>
-    <header>
-      <h1><a href="/" style="text-decoration:none">Před koupí</a></h1>
-      <p class="tlumene">Přehled zdarma. Nejdřív ověříme, o jakou nemovitost jde.</p>
-    </header>
+<body class="stranka-proverit">
+<a class="preskocit" href="#obsah">Přejít na obsah</a>
 
-    <form id="formular" autocomplete="off">
-      <label for="vstup">Odkaz na inzerát nebo adresa nemovitosti</label>
-      <input id="vstup" name="vstup" type="text" required
-             placeholder="např. odkaz ze Sreality nebo Karlická 49, Radotín">
-      <p class="tlumene napoveda">Stačí vložit odkaz na inzerát ze Sreality, Bezrealitek nebo iDNES Reality, dům dohledáme sami.
-        Když to z inzerátu nepůjde jednoznačně, ukážeme dům na mapě k potvrzení.</p>
-      <button type="submit">Ověřit nemovitost</button>
+<header class="hlavicka">
+  <div class="obal lista">
+    <a class="logo" href="/" aria-label="Před koupí – úvod"><b>PŘED KOUPÍ</b><span>prověření bytu a domu</span></a>
+    <a class="tl obrys" href="/#ceny">Ceník</a>
+  </div>
+</header>
+
+<main id="obsah" class="obal">
+  <div class="zahlavi">
+    <span class="stitek">Přehled zdarma</span>
+    <h1>Prověřte nemovitost</h1>
+    <p class="podnadpis">Vložte odkaz na inzerát nebo adresu. Dům dohledáme v katastru a za pár vteřin ukážeme povodně, hluk, radon, územní plán a okolí.</p>
+    <form id="formular" class="zadani" autocomplete="off">
+      <label for="vstup">Odkaz na inzerát nebo adresa</label>
+      <div class="pole">
+        <input id="vstup" name="vstup" type="text" required autocorrect="off" spellcheck="false" enterkeyhint="go" placeholder="Karlická 49, Radotín">
+        <button class="tl svetle" type="submit">Prověřit</button>
+      </div>
+      <p class="napoveda">Funguje odkaz ze Sreality, Bezrealitek i iDNES Reality. Když inzerát dům neurčí jednoznačně, ukážeme ho na leteckém snímku k potvrzení.</p>
     </form>
+  </div>
 
+  <section id="vysledek" aria-live="polite"></section>
 
-    <section id="vysledek" aria-live="polite"></section>
+  <p class="paticka-zdroje">Data: katastr a registr adres (ČÚZK), Geoportál hl. m. Prahy, ČGS, IPR Praha. Stránka nic neukládá. Nejde o právní ani znalecký posudek.</p>
+</main>
 
-    <footer class="tlumene">
-      Data: RÚIAN (ČÚZK). Stránka nic neukládá. Nejde o právní ani znalecký posudek.
-    </footer>
-  </main>
-  <script src="ochutnavka.js?v=4"></script>
-  <script src="app.js?v=10"></script>
+<script src="ochutnavka.js?v=5"></script>
+<script src="app.js?v=12"></script>
 </body>
 </html>

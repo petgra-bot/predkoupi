@@ -1,0 +1,117 @@
+/* Stránka Přehled zdarma (identifikace + ochutnávka) – tmavá varianta hlavního webu.
+   Tokeny a hlavička, pole a tlačítka jsou z ../ukazka/styl.css; tady jen tmavé pozadí a výsledky. */
+.stranka-proverit {
+  --karta-t: #283157;           /* karty na tmavém pozadí */
+  --karta-t2: #2f3a66;          /* najetí, rozbalené */
+  --text-t: #ffffff;
+  --tlumene-t: rgba(255,255,255,.72);   /* 8,3 : 1 na #1e2645, 7,4 : 1 na #283157 */
+  --slabe-t: rgba(255,255,255,.62);     /* 6,4 : 1 na #283157 */
+  --linka-t: rgba(255,255,255,.16);
+  --zelena-t: #7fd19b; --oranzova-t: #f0b060; --cervena-t: #ff8f8f;   /* barvy nadpisů karet, nad 7 : 1 */
+  background: var(--navy); color: var(--text-t);
+}
+.stranka-proverit main { padding-top: clamp(32px, 5vw, 56px); padding-bottom: 56px; max-width: 880px; }
+.stranka-proverit section { padding: 0; }
+.stranka-proverit a { color: var(--text-t); }
+
+/* Záhlaví a formulář */
+.zahlavi h1 { margin: 12px 0 14px; font-size: clamp(2rem, 5vw, 3.25rem); }
+.zahlavi .podnadpis { color: var(--tlumene-t); max-width: 52ch; margin-bottom: 28px; font-size: 1.0625rem; }
+.zahlavi .stitek { color: var(--slabe-t); }
+.zahlavi .zadani label { color: var(--text-t); }
+.zahlavi .napoveda { color: var(--slabe-t); max-width: 60ch; }
+.zahlavi .pole .tl:disabled { opacity: .6; cursor: progress; }
+
+#vysledek { margin-top: 36px; }
+#vysledek:empty { margin-top: 0; }
+#vysledek > p.tlumene { color: var(--tlumene-t); font-size: .95rem; }
+#vysledek > p.tlumene::before { content: ""; display: inline-block; width: .7em; height: .7em; margin-right: .6em; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; vertical-align: -.05em; animation: tocit .8s linear infinite; }
+@keyframes tocit { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { #vysledek > p.tlumene::before { animation: none; } }
+.tlumene { color: var(--tlumene-t); }
+
+/* Karty výsledku */
+.karta { background: var(--karta-t); border: 1px solid var(--linka-t); border-top: 3px solid var(--c, var(--linka-t)); padding: 20px 22px; margin: 0 0 16px; }
+.karta.ok { --c: var(--zelena-t); }
+.karta.upresnit { --c: var(--oranzova-t); }
+.karta.chyba { --c: var(--cervena-t); }
+.karta.och-karta { --c: rgba(255,255,255,.55); }
+.karta h2 { margin: 0 0 8px; font-size: 1rem; font-weight: 800; letter-spacing: .02em; line-height: 1.3; text-transform: uppercase; color: var(--c, var(--text-t)); }
+.karta.och-karta h2 { color: var(--text-t); }
+.karta p { margin: 10px 0 0; }
+.karta p:first-of-type { margin-top: 0; }
+
+dl { display: grid; grid-template-columns: max-content 1fr; gap: 8px 20px; margin: 4px 0 0; font-size: .95rem; }
+dt { color: var(--slabe-t); } dd { margin: 0; }
+@media (max-width: 560px) { dl { grid-template-columns: 1fr; gap: 2px; } dt { margin-top: 10px; } }
+
+/* Sbalování (identifikace, přehled zdarma) */
+.sbal > summary { list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 16px; touch-action: manipulation; }
+.sbal > summary::-webkit-details-marker { display: none; }
+.hlavicka-sbal { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.hlavicka-sbal h2 { margin: 0; }
+.shrnuti { font-size: .92rem; color: var(--tlumene-t); }
+.prepinac { flex: none; display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 14px; border: 1px solid rgba(255,255,255,.4);
+  font: 600 .75rem/1 "Montserrat", sans-serif; letter-spacing: .1em; text-transform: uppercase; color: var(--text-t); white-space: nowrap; }
+.prepinac::before { content: "Rozbalit"; }
+.sbal[open] > summary .prepinac::before { content: "Sbalit"; }
+.prepinac::after { content: ""; width: 7px; height: 7px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: translateY(-2px) rotate(45deg); transition: transform .2s var(--krivka); }
+.sbal[open] > summary .prepinac::after { transform: translateY(2px) rotate(-135deg); }
+@media (hover: hover) and (pointer: fine) { .sbal > summary:hover .prepinac { background: rgba(255,255,255,.08); } }
+.sbal > summary:active .prepinac { transform: scale(.97); }
+.sbal[open] > summary { margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid var(--linka-t); }
+@media (max-width: 420px) { .prepinac { padding: 0 10px; letter-spacing: .06em; } }
+
+/* Upozornění, alternativy, kandidáti, mapa */
+.poznamka { background: rgba(240,176,96,.14); border: 1px solid rgba(240,176,96,.45); color: var(--text-t); padding: 10px 14px; margin-top: 12px; font-size: .92rem; }
+.alternativy { margin-top: 14px; font-size: .9rem; }
+.alternativy button, ul.kandidati button, .vybrany button {
+  font: 500 .9rem "Montserrat", sans-serif; color: var(--text-t); background: transparent; border: 1px solid rgba(255,255,255,.4);
+  padding: 8px 12px; cursor: pointer; touch-action: manipulation; }
+.alternativy button { margin: 4px 6px 0 0; }
+ul.kandidati { list-style: none; padding: 0; margin: 12px 0 0; display: grid; gap: 6px; }
+ul.kandidati button { width: 100%; text-align: left; min-height: 48px; }
+ul.kandidati button .tlumene { color: var(--slabe-t); }
+@media (hover: hover) and (pointer: fine) { .alternativy button:hover, ul.kandidati button:hover, .vybrany button:hover { background: rgba(255,255,255,.08); } }
+.alternativy button:active, ul.kandidati button:active, .vybrany button:active { transform: scale(.98); }
+.vybrany button { background: var(--bila); color: var(--navy); font-weight: 600; text-transform: uppercase; letter-spacing: .08em; font-size: .75rem; min-height: 44px; }
+.mapa { height: 420px; margin: 14px 0; border: 1px solid var(--linka-t); }
+@media (max-width: 520px) { .mapa { height: 360px; } }
+.vybrany { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; margin: 0 0 8px; }
+.vybrany[hidden] { display: none; }
+.vybrany span { font-weight: 600; }
+
+/* Přehled zdarma */
+.ochutnavka { margin: 0; }
+.och-snimek { position: relative; margin: 0 0 16px; }
+.och-snimek img, .och-snimek svg { display: block; width: 100%; height: auto; }
+.och-snimek svg { position: absolute; inset: 0; }
+.och-snimek polygon { stroke: #fff; filter: drop-shadow(0 0 2px rgba(0,0,0,.6)); }
+.och-snimek figcaption { font-size: .8rem; color: var(--slabe-t); margin-top: 6px; }
+.och-tabulka { width: 100%; border-collapse: collapse; font-size: .95rem; }
+.och-tabulka th, .och-tabulka td { text-align: left; vertical-align: top; padding: 12px 8px 12px 0; border-top: 1px solid var(--linka-t); }
+.och-tabulka th { font-weight: 700; white-space: nowrap; padding-right: 14px; }
+.och-tabulka td:nth-child(2) { padding-right: 14px; }
+.och-znacka { display: inline-block; font-size: .625rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; padding: 4px 8px; color: #fff; white-space: nowrap; }
+.och-znacka.zelena { background: var(--zelena); } .och-znacka.oranzova { background: var(--oranzova); } .och-znacka.cervena { background: var(--cervena); } .och-znacka.seda { background: var(--seda); }
+.och-znacka.zam { background: transparent; color: var(--tlumene-t); border: 1px solid rgba(255,255,255,.35); }
+.och-zamceno th, .och-zamceno td { color: var(--slabe-t); }
+.och-zamceno th::before { content: ""; display: inline-block; width: 11px; height: 13px; margin-right: 8px; vertical-align: -1px; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 14'%3E%3Cpath d='M3 6V4a3 3 0 0 1 6 0v2' fill='none' stroke='white' stroke-width='1.6'/%3E%3Crect x='1' y='6' width='10' height='7.5' rx='1' fill='white'/%3E%3C/svg%3E") no-repeat center / contain; opacity: .7; }
+.ochutnavka > p.tlumene { margin-top: 14px; font-size: .82rem; color: var(--slabe-t); }
+@media (max-width: 560px) {
+  .och-tabulka tr { display: grid; grid-template-columns: auto 1fr; column-gap: 12px; border-top: 1px solid var(--linka-t); padding: 12px 0; }
+  .och-tabulka th, .och-tabulka td { border-top: 0; padding: 0; }
+  .och-tabulka td:last-child { grid-column: 1 / -1; padding-top: 6px; }
+}
+
+/* Co dál – nabídka */
+.co-dal { background: var(--bila); color: var(--navy); padding: 22px 24px; margin-top: 4px; }
+.co-dal h3 { margin: 0 0 8px; font-size: 1rem; font-weight: 800; text-transform: uppercase; letter-spacing: .02em; }
+.co-dal p { margin: 8px 0 0; color: var(--tlumene); }
+.co-dal a { color: var(--navy); font-weight: 600; text-underline-offset: 3px; }
+
+.paticka-zdroje { margin-top: 40px; font-size: .8rem; color: var(--slabe-t); max-width: 70ch; }
+.co-dal .akce { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+.co-dal .akce a { text-decoration: none; }
+.tl.obrys-tmave { color: var(--navy); border: 1px solid var(--navy); background: transparent; }
+@media (hover: hover) and (pointer: fine) { .tl.obrys-tmave:hover { background: var(--svetla); } .co-dal .tl.tmave-tl:hover { background: var(--navy-3); } }
