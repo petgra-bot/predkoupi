@@ -368,7 +368,9 @@ async function zobrazBudovu(adresa, inz, puvod) {
     tabulka + upozorneni.map((u) => `<p class="poznamka">${esc(u)}</p>`).join("") + dalsi +
     (alternativy.length ? `<div class="alternativy tlumene">Není to on? ${alternativy.map((a, i) =>
       `<button type="button" data-alt="${i}">${esc(a.adresa.split(",")[0])}</button>`).join("")}</div>` : "") +
-    `<p class="tlumene">Další krok (rozbor katastru, povodní, hluku, územního plánu a ceny) zatím není zapojen.</p>`);
+    (typ === "jiná stavba" ? "" : `<div class="co-dal"><h3>Co dál</h3>
+      <p>Přehled povodní, hluku, radonu a územního plánu zdarma pro tuto nemovitost zapojujeme. Objednávky Prověrky (790 Kč) a Prověrky PLUS (1 290 Kč) spouštíme v nejbližších týdnech.</p>
+      <p><a href="/#ceny">Co obsahuje Prověrka a PLUS</a> · <a href="mailto:info@predkoupi.cz?subject=Zájem o Prověrku">Napište nám, dáme vědět při spuštění</a></p></div>`));
   $("vysledek").querySelectorAll("button[data-alt]").forEach((btn) => btn.addEventListener("click", () =>
     zobrazBudovu(alternativy[+btn.dataset.alt], inz, { jak: "vybráno z nabídky", jistota: "jistá" }).catch(chyba)));
 }

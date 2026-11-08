@@ -51,3 +51,7 @@ ul.kandidati button { margin: 4px 0; width: 100%; text-align: left; color: var(-
 .poznamka { background: var(--oranzova-bg); border-radius: 8px; padding: 8px 12px; margin-top: 10px; }
 footer { margin-top: 32px; }
 @media (max-width: 520px) { .dvojice, dl { grid-template-columns: 1fr; } dt { margin-top: 6px; } }
+
+.co-dal { margin-top: 18px; padding: 14px 16px; background: var(--pozadi); border: 1px solid var(--linka); }
+.co-dal h3 { margin: 0 0 6px; font-size: 1rem; }
+.co-dal p { margin: 6px 0 0; }
