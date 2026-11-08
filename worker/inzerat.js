@@ -1,6 +1,7 @@
 // Cloudflare Worker: přečte jeden inzerát, který zadal uživatel, a vrátí jen údaje potřebné
 // k identifikaci nemovitosti. Nic neukládá kromě krátké cache odpovědi (1 h).
 //   GET /?url=https://www.sreality.cz/detail/...   → JSON
+//   POST /zajem (email=…)                            → uloží e-mail zájemce do KV „ZAJEMCI“ (jen z povolených webů)
 const POVOLENE_ORIGINY = [/^https:\/\/proverka\.gratzer\.cz$/, /^https:\/\/(www\.)?predkoupi\.cz$/, /^http:\/\/localhost(:\d+)?$/];
 // Sreality ne: jejich robots.txt zakazuje automatické čtení všem kromě vyhledávačů. Inzeráty ze Sreality čte
 // záložka „Prověřit“ v prohlížeči uživatele (app.js → zalozka).
@@ -14,7 +15,8 @@ export default {
     const origin = request.headers.get("Origin") || "";
     const cors = POVOLENE_ORIGINY.some((r) => r.test(origin))
       ? { "Access-Control-Allow-Origin": origin, "Vary": "Origin" } : {};
-    if (request.method === "OPTIONS") return new Response(null, { headers: { ...cors, "Access-Control-Allow-Methods": "GET" } });
+    if (request.method === "OPTIONS") return new Response(null, { headers: { ...cors, "Access-Control-Allow-Methods": "GET, POST" } });
+    if (request.method === "POST" && new URL(request.url).pathname === "/zajem") return zajemce(request, env, cors, origin);
 
     const odpoved = (data, status = 200) => new Response(JSON.stringify(data), {
       status, headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "public, max-age=3600", ...cors },
@@ -135,3 +137,26 @@ function idnes(html, url) {
 }
 
 export const _test = { sreality, bezrealitky, idnes };
+
+// Zájemci o spuštění placené služby: e-mail + datum, nic dalšího. Po rozeslání oznámení se smažou.
+async function zajemce(request, env, cors, origin) {
+  const json = (data, status = 200) => new Response(JSON.stringify(data), {
+    status, headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store", ...cors } });
+  if (!POVOLENE_ORIGINY.some((r) => r.test(origin))) return json({ chyba: "Nepovolený původ." }, 403);
+  if (!env.ZAJEMCI) return json({ chyba: "Ukládání není nastavené." }, 503);
+  let form;
+  try { form = await request.formData(); } catch { return json({ chyba: "Neplatný formulář." }, 400); }
+  if (form.get("web")) return json({ ok: true });                       // past na roboty (skryté pole)
+  const email = String(form.get("email") || "").trim().toLowerCase();
+  if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return json({ chyba: "Zadejte e-mail ve tvaru jmeno@example.cz." }, 400);
+  // Nejvýš 10 zápisů za hodinu z jedné IP adresy (IP se ukládá jen jako otisk a sama zmizí).
+  const ip = request.headers.get("CF-Connecting-IP") || "";
+  const otisk = [...new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(ip)))].slice(0, 8).map((b) => b.toString(16).padStart(2, "0")).join("");
+  const limitKlic = `limit:${otisk}`;
+  const pocet = Number(await env.ZAJEMCI.get(limitKlic)) || 0;
+  if (pocet >= 10) return json({ chyba: "Příliš mnoho pokusů, zkuste to později." }, 429);
+  await env.ZAJEMCI.put(limitKlic, String(pocet + 1), { expirationTtl: 3600 });
+  const zdroj = String(form.get("zdroj") || "").slice(0, 40);
+  await env.ZAJEMCI.put(`email:${email}`, JSON.stringify({ email, datum: new Date().toISOString(), zdroj }));
+  return json({ ok: true });
+}

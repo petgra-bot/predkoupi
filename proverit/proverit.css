@@ -115,3 +115,4 @@ ul.kandidati button .tlumene { color: var(--slabe-t); }
 .co-dal .akce a { text-decoration: none; }
 .tl.obrys-tmave { color: var(--navy); border: 1px solid var(--navy); background: transparent; }
 @media (hover: hover) and (pointer: fine) { .tl.obrys-tmave:hover { background: var(--svetla); } .co-dal .tl.tmave-tl:hover { background: var(--navy-3); } }
+.co-dal-zajem { margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--linka); }

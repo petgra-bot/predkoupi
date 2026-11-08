@@ -21,7 +21,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styl.css?v=9">
+<link rel="stylesheet" href="styl.css?v=10">
 </head>
 <body>
 <a class="preskocit" href="#obsah">Přejít na obsah</a>
@@ -151,6 +151,7 @@
         <a class="tl tmave-tl" href="#zacit">Objednat PLUS</a>
       </div>
     </div>
+    <div class="ceny-zajem"><div data-zajem data-zdroj="cenik"><p><a href="mailto:info@predkoupi.cz">Dejte nám vědět na info@predkoupi.cz</a>, až budete chtít objednat.</p></div></div>
   </div>
 </section>
 
@@ -179,5 +180,6 @@ document.querySelectorAll('form.zadani').forEach(f => {
   f.addEventListener('submit', e => { i.value = i.value.trim(); if (!i.value) { e.preventDefault(); i.setCustomValidity(zprava); i.reportValidity(); } });
 });
 </script>
+<script src="/zajem.js?v=1" defer></script>
 </body>
 </html>
