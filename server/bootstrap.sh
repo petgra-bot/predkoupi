@@ -10,7 +10,7 @@ export DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a NEEDRESTART_SUSPEND=1
 APT="apt-get -y -q -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold"
 # Malý oddíl /boot (264 MB): menší soubory pro start jádra (jen moduly, které tento server potřebuje) a pryč stará jádra.
 sed -i 's/^MODULES=most/MODULES=dep/' /etc/initramfs-tools/initramfs.conf 2>/dev/null || true
-for k in /boot/initrd.img-*; do v=${k#/boot/initrd.img-}; [ "$v" != "$(uname -r)" ] && [ -e "$k" ] && rm -f "$k" && echo "Smazán starý $k"; done
+for k in /boot/initrd.img-*; do v=${k#/boot/initrd.img-}; [ "$v" != "$(uname -r)" ] && [ -e "$k" ] && rm -f "$k" && echo "Smazán starý $k"; done; true
 # Dokončit případnou přerušenou instalaci z minulého běhu.
 dpkg --configure -a --force-confdef --force-confold </dev/null || true
 $APT -f install </dev/null
