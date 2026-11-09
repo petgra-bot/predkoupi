@@ -8,10 +8,14 @@ echo "== 1/7 Aktualizace systému"
 export DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a NEEDRESTART_SUSPEND=1
 # Dotazy na konfigurační soubory: ponechat stávající / výchozí (jinak dpkg skončí chybou při spuštění přes curl | bash).
 APT="apt-get -y -q -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold"
+# Malý oddíl /boot (264 MB): menší soubory pro start jádra (jen moduly, které tento server potřebuje) a pryč stará jádra.
+sed -i 's/^MODULES=most/MODULES=dep/' /etc/initramfs-tools/initramfs.conf 2>/dev/null || true
+for k in /boot/initrd.img-*; do v=${k#/boot/initrd.img-}; [ "$v" != "$(uname -r)" ] && [ -e "$k" ] && rm -f "$k" && echo "Smazán starý $k"; done
 # Dokončit případnou přerušenou instalaci z minulého běhu.
 dpkg --configure -a --force-confdef --force-confold </dev/null || true
 $APT -f install </dev/null
 apt-get update -q </dev/null && $APT upgrade </dev/null
+$APT autoremove --purge </dev/null   # stará jádra pryč (místo v /boot)
 $APT install ca-certificates curl git ufw fail2ban unattended-upgrades \
   python3 python3-venv python3-pip poppler-utils fonts-dejavu-core jq </dev/null
 
