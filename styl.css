@@ -261,3 +261,12 @@ h2.h3 { font-size: 0.9375rem; font-weight: 700; letter-spacing: .02em; line-heig
 .pravni table { width: 100%; border-collapse: collapse; font-size: .9375rem; }
 .pravni th, .pravni td { text-align: left; vertical-align: top; padding: 10px 12px 10px 0; border-top: 1px solid var(--linka); }
 .pravni th { font-weight: 700; border-top: 2px solid var(--navy); }
+@media (max-width: 600px) {
+  .pravni table, .pravni tbody, .pravni tr, .pravni td { display: block; width: 100%; }
+  .pravni thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .pravni tr { border-top: 1px solid var(--linka); padding: 10px 0; }
+  .pravni td { border: 0; padding: 3px 0; }
+  .pravni td[data-label]::before { content: attr(data-label) ": "; font-weight: 700; }
+  .pravni td:first-child { font-weight: 700; font-size: 1.0625rem; }
+  .pravni td:first-child::before { content: none; }
+}
