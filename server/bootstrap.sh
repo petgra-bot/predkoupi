@@ -5,13 +5,18 @@
 set -euo pipefail
 [ "$(id -u)" = 0 ] || { echo "Spusťte jako root."; exit 1; }
 echo "== 1/7 Aktualizace systému"
-export DEBIAN_FRONTEND=noninteractive
-apt-get update -q && apt-get -y -q upgrade
-apt-get -y -q install ca-certificates curl git ufw fail2ban unattended-upgrades \
-  python3 python3-venv python3-pip poppler-utils fonts-dejavu-core jq
+export DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a NEEDRESTART_SUSPEND=1
+# Dotazy na konfigurační soubory: ponechat stávající / výchozí (jinak dpkg skončí chybou při spuštění přes curl | bash).
+APT="apt-get -y -q -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold"
+# Dokončit případnou přerušenou instalaci z minulého běhu.
+dpkg --configure -a --force-confdef --force-confold </dev/null || true
+$APT -f install </dev/null
+apt-get update -q </dev/null && $APT upgrade </dev/null
+$APT install ca-certificates curl git ufw fail2ban unattended-upgrades \
+  python3 python3-venv python3-pip poppler-utils fonts-dejavu-core jq </dev/null
 
 echo "== 2/7 Automatické bezpečnostní aktualizace"
-dpkg-reconfigure -f noninteractive unattended-upgrades
+dpkg-reconfigure -f noninteractive unattended-upgrades </dev/null
 
 echo "== 3/7 Swap 2 GB (pojistka pro výrobu PDF)"
 if ! swapon --show | grep -q /swapfile; then
@@ -25,13 +30,13 @@ ufw allow OpenSSH >/dev/null; ufw --force enable >/dev/null; ufw status | head -
 
 echo "== 5/7 Node.js 22 a Chromium pro PDF"
 if ! command -v node >/dev/null || ! node -v | grep -q '^v22'; then
-  curl -fsSL https://deb.nodesource.com/setup_22.x | bash - >/dev/null
-  apt-get -y -q install nodejs
+  curl -fsSL https://deb.nodesource.com/setup_22.x | bash - >/dev/null </dev/null
+  $APT install nodejs </dev/null
 fi
 timedatectl set-timezone Europe/Prague
 
 echo "== 6/7 Uživatel 'nemo' pro aplikaci a klíč pro čtení repozitáře z GitHubu"
-id nemo >/dev/null 2>&1 || adduser --disabled-password --gecos "" nemo
+id nemo >/dev/null 2>&1 || adduser --disabled-password --gecos "" nemo </dev/null
 sudo -u nemo mkdir -p /home/nemo/.ssh
 [ -f /home/nemo/.ssh/github_deploy ] || sudo -u nemo ssh-keygen -q -t ed25519 -N "" -C "predkoupi-server-deploy" -f /home/nemo/.ssh/github_deploy
 sudo -u nemo bash -c 'cat > ~/.ssh/config <<C
