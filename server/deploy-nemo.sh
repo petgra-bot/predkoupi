@@ -22,7 +22,9 @@ echo "Kód: $(sudo -u nemo git -C "$APP" log --oneline -1)"
 echo "== 2/6 Python knihovny"
 sudo -u nemo python3 -m venv /home/nemo/venv
 sudo -u nemo /home/nemo/venv/bin/pip install -q --upgrade pip </dev/null
+sudo -u nemo /home/nemo/venv/bin/pip install -q --force-reinstall --no-deps "numpy<2.2" </dev/null
 sudo -u nemo /home/nemo/venv/bin/pip install -q -r "$APP/nemo/requirements.txt" </dev/null
+echo "Procesor: $(grep -m1 "model name" /proc/cpuinfo | cut -d: -f2) | SSE4.2: $(grep -qw sse4_2 /proc/cpuinfo && echo ano || echo ne)"
 
 echo "== 3/6 Node knihovny a Chromium pro PDF"
 sudo -u nemo bash -c "cd $APP/nemo && npm ci --silent --no-audit --no-fund </dev/null"
