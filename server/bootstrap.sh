@@ -30,7 +30,7 @@ ufw allow OpenSSH >/dev/null; ufw --force enable >/dev/null; ufw status | head -
 
 echo "== 5/7 Node.js 22 a Chromium pro PDF"
 if ! command -v node >/dev/null || ! node -v | grep -q '^v22'; then
-  curl -fsSL https://deb.nodesource.com/setup_22.x | bash - >/dev/null </dev/null
+  curl -fsSL https://deb.nodesource.com/setup_22.x -o /tmp/nodesource.sh && bash /tmp/nodesource.sh >/dev/null </dev/null
   $APT install nodejs </dev/null
 fi
 timedatectl set-timezone Europe/Prague
