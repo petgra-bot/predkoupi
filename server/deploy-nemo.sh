@@ -50,7 +50,28 @@ OnUnitActiveSec=10min
 [Install]
 WantedBy=timers.target
 S
-systemctl daemon-reload && systemctl enable --now nemo-aktualizace.timer >/dev/null
+# Noční stažení dokumentace EIA pro Prahu (nastroje/eia_cache.py), ať prověrka nečeká na portál CENIA.
+cat > /etc/systemd/system/nemo-eia.service <<S
+[Unit]
+Description=NEMO – předem stažená dokumentace EIA pro Prahu
+[Service]
+Type=oneshot
+User=nemo
+WorkingDirectory=$APP/nemo
+Nice=10
+TimeoutStartSec=6h
+ExecStart=/home/nemo/venv/bin/python -m nastroje.eia_cache
+S
+cat > /etc/systemd/system/nemo-eia.timer <<S
+[Unit]
+Description=NEMO – EIA každou noc ve 2:40
+[Timer]
+OnCalendar=*-*-* 02:40
+Persistent=true
+[Install]
+WantedBy=timers.target
+S
+systemctl daemon-reload && systemctl enable --now nemo-aktualizace.timer nemo-eia.timer >/dev/null
 
 echo "== 5/6 Zkouška: ochutnávka (veřejné mapy)"
 cd "$APP/nemo"
@@ -69,5 +90,5 @@ rm -rf "$APP/nemo/vystupy/server-test" "$APP/nemo/reporty/server-test-ochutnavka
 echo
 echo "=================== HOTOVO ==================="
 echo "Kód: $(sudo -u nemo git -C "$APP" log --oneline -1)"
-echo "Automatická aktualizace: $(systemctl is-active nemo-aktualizace.timer)"
+echo "Automatická aktualizace: $(systemctl is-active nemo-aktualizace.timer) | Noční EIA: $(systemctl is-active nemo-eia.timer)"
 echo "Paměť volná: $(free -h | awk '/Mem/{print $7}')  | Disk volno: $(df -h / | awk 'NR==2{print $4}')"
