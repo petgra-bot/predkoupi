@@ -162,7 +162,7 @@ async function ochutnavkaVyhodnot(dum, jeDum) {
   else {
     const l = v.lokality.value[0], kor = ochOk(v.koridory) ? v.koridory.value : null;
     let t = [`Lokalita ${l.nazev || ""}`.trim(), [l.stabilita, l.vyuziti].filter(Boolean).join(", ")].filter(Boolean).join(": ");
-    if (kor !== null) t += `; dopravní koridor ${Math.round(kor)} m od domu`;
+    if (kor !== null) t += `; dopravní koridor ${kor.toFixed(1).replace('.', ',')} m od domu`;
     o.push(["Územní plán", String(l.stabilita).startsWith("stabilizovan") && kor === null ? "zelena" : "oranzova", t + "."]);
   }
   const nalezy = []; let barva = "zelena";
