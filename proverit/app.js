@@ -366,7 +366,6 @@ async function zobrazBudovu(adresa, inz, puvod) {
   const { typ, zpusob } = typBudovy(b);
 
   const upozorneni = [];
-  if (!/Praha/.test(adresa.adresa)) upozorneni.push("Zatím prověřujeme jen Prahu. Identifikace funguje, další kroky pro tuto obec zatím nejsou.");
   if (inz?.typ === "byt" && typ === "rodinný dům") upozorneni.push("Inzerát nabízí byt, ale na adrese je podle RÚIAN rodinný dům. Ověřte prosím adresu.");
   if (inz?.typ === "dum" && typ === "bytový dům") upozorneni.push("Inzerát nabízí rodinný dům, ale na adrese je podle RÚIAN bytový dům. Ověřte prosím adresu.");
   if (typ === "jiná stavba") upozorneni.push(`Budova je v RÚIAN vedená jako „${zpusob}“. Prověrka zatím umí byty a rodinné domy.`);
@@ -398,6 +397,8 @@ async function zobrazBudovu(adresa, inz, puvod) {
        Jednotku dohledáme v katastru podle plochy a podlaží z inzerátu.</p>`
     : "";
   const tabulka = `<dl>${radky.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("")}</dl>`;
+  const vPraze = /Praha/.test(adresa.adresa);
+  const obec = (adresa.adresa.match(/\d{5}\s+(.+)$/)?.[1] || adresa.adresa.split(",").pop()).trim();
   const nadpis = typ === "jiná stavba" ? "Tento typ stavby zatím neprověřujeme" : "Nemovitost je identifikovaná";
   const jina = typ === "jiná stavba";
   // Údaje o budově sbalené pod jedním řádkem (adresa a typ); upozornění a „Není to on?“ zůstávají vidět.
@@ -410,9 +411,16 @@ async function zobrazBudovu(adresa, inz, puvod) {
       ${alternativy.length ? `<div class="alternativy tlumene">Není to on? ${alternativy.map((a, i) =>
         `<button type="button" data-alt="${i}">${esc(a.adresa.split(",")[0])}</button>`).join("")}</div>` : ""}
     </div>` +
-    (jina ? "" : (/Praha/.test(adresa.adresa) ? `<div id="ochutnavka" class="karta och-karta"></div>` : "") + `<div class="co-dal"><h3>Co dál</h3>
+    (jina ? "" : vPraze ? `<div id="ochutnavka" class="karta och-karta"></div><div class="co-dal"><h3>Co dál</h3>
       <p>Objednávky Prověrky (790 Kč) a Prověrky PLUS (1 290 Kč) spouštíme v nejbližších týdnech.</p>
-      <div class="akce"><a class="tl tmave-tl" href="/#ceny">Co obsahuje Prověrka</a></div><div class="co-dal-zajem" data-zajem data-zdroj="proverit"></div></div>`);
+      <div class="akce"><a class="tl tmave-tl" href="/#ceny">Co obsahuje Prověrka</a></div><div class="co-dal-zajem" data-zajem data-zdroj="proverit"></div></div>`
+      // Mimo Prahu (W11, 12. 11. 2026): měříme zájem – e-mail a obec, ať víme, kam službu rozšířit.
+      : `<div class="co-dal"><h3>Mimo Prahu zatím neprověřujeme</h3>
+      <p>Prověrku zatím děláme jen v Praze, protože pro ni máme nejpodrobnější data (územní plán, záplavy, hluk u fasády).
+      Podle zájmu přidáme další obce – nejdřív okolí Prahy.</p>
+      <div class="co-dal-zajem" data-zajem data-zdroj="${esc(("mimo:" + obec).slice(0, 40))}" data-stitek="E-mail pro oznámení, až budeme prověřovat i v obci ${esc(obec)}"
+        data-souhlas="Pošleme jedinou zprávu, až službu rozšíříme do vaší obce, a pak e-mail smažeme. Ukládáme jen e-mail a název obce."
+        data-hotovo="až budeme prověřovat i ve vaší obci"></div></div>`);
   if ($("ochutnavka")) ochutnavka(adresa.so, $("ochutnavka"));
   document.querySelectorAll("#vysledek [data-zajem]").forEach((k) => window.zajemFormular?.(k));
   $("vysledek").querySelectorAll("button[data-alt]").forEach((btn) => btn.addEventListener("click", () =>
