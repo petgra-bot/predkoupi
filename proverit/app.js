@@ -39,6 +39,41 @@ async function geokoduj(text, pocet = 10) {
   return (data.candidates || []).filter((c) => c.score >= 90);
 }
 
+// Varianty zadané adresy pro geokodér (W2a, 12. 11. 2026): geokodér zná poštovní „Praha 5“ a části obce („Radotín“),
+// ale ne správní obvody („Praha 16“), „Praha 16 - Radotín“ ani PSČ s mezerou („153 00“).
+function variantyAdresy(text) {
+  const t = text.replace(/\s+/g, " ").trim();
+  const bezMezeryPsc = t.replace(/\b(\d{3}) (\d{2})\b/g, "$1$2");
+  const m = t.match(/Praha[\s-]*(\d{1,2})?(?:\s*[-–]\s*([^,\d]+))?/i);
+  const castZPrahy = m?.[2]?.trim();
+  const segmenty = t.replace(/\b\d{3} ?\d{2}\b/g, "").split(",").map((s) => s.trim()).filter(Boolean);
+  const ulice = segmenty.find((s) => /\d/.test(s.replace(/Praha[\s-]*\d{1,2}/i, ""))) || segmenty[0] || "";
+  const ulic = ulice.replace(/\s*Praha.*$/i, "").trim();
+  const casti = [castZPrahy, ...segmenty.filter((s) => s !== ulice && !/^Praha/i.test(s))].filter(Boolean);
+  const v = [t, bezMezeryPsc, ...casti.map((c) => `${ulic}, ${c}`)];
+  if (m) v.push(`${ulic}, Praha`);
+  v.push(ulic);
+  return { varianty: [...new Set(v.filter(Boolean))], praha: !!m, cislo: m?.[1], casti };
+}
+
+// Postupně zkouší varianty; z výsledků nechá Prahu (pokud ji uživatel napsal) a podle části obce nebo čísla obvodu zúží.
+async function geokodujChytre(text) {
+  const { varianty, praha, cislo, casti } = variantyAdresy(text);
+  for (const q of varianty) {
+    let kand = (await geokoduj(q, 10)).filter((c) => c.attributes.Type === "AdresniMisto");
+    if (praha) kand = kand.filter((c) => /Praha/.test(c.address));
+    if (!kand.length) continue;
+    const podleCasti = kand.filter((c) => casti.some((x) => c.address.toLowerCase().includes(x.toLowerCase())));
+    if (podleCasti.length) kand = podleCasti;
+    else if (cislo && kand.length > 1) {
+      const podleCisla = kand.filter((c) => new RegExp(`Praha ${cislo}$`).test(c.address));
+      if (podleCisla.length) kand = podleCisla;
+    }
+    return kand;
+  }
+  return [];
+}
+
 async function adresniMista(where) {
   const d = await dotaz(`${PROHLIZECI}/1/query`, { where, outFields: "kod,adresa,stavebniobjekt", returnGeometry: true, outSR: 4326 });
   return (d.features || []).map((f) => ({ kod: f.attributes.kod, adresa: f.attributes.adresa, so: f.attributes.stavebniobjekt,
@@ -451,8 +486,8 @@ async function overit(e) {
     if (url) return await overitOdkaz(url);
 
     nacitam("Hledám v registru adres…");
-    const kand = await geokoduj(text, 10);
-    const adresy = kand.filter((c) => c.attributes.Type === "AdresniMisto");
+    const adresy = await geokodujChytre(text);
+    const kand = adresy.length ? adresy : await geokoduj(text, 10);
     if (!kand.length) {
       $("vysledek").innerHTML = karta("chyba", "Adresu se nepodařilo najít",
         `<p>V registru adres RÚIAN jsme nic nenašli. Zkontrolujte ulici a číslo, případně přidejte část obce.</p>`);
