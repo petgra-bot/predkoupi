@@ -16,7 +16,9 @@
   window.zajemFormular = (kontejner) => {
     const f = document.createElement("form");
     f.className = "zajem"; f.noValidate = true;
-    f.innerHTML = html(kontejner.dataset.zdroj || "web", `zajem-email-${++n}`, kontejner.dataset);
+    // Testovací kopie (proverka.gratzer.cz) ukládá se zdrojem „test:…“, ať se nemíchá se zájemci z produkce.
+    const zdroj = (location.hostname.startsWith("proverka.") ? "test:" : "") + (kontejner.dataset.zdroj || "web");
+    f.innerHTML = html(zdroj.slice(0, 40), `zajem-email-${++n}`, kontejner.dataset);
     kontejner.replaceChildren(f);
     const vstup = f.querySelector("input[type=email]"), tl = f.querySelector("button"), stav = f.querySelector(".stav");
     f.addEventListener("submit", async (e) => {
