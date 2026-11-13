@@ -25,7 +25,10 @@ const OCH_AREALY = {
 };
 
 // ---------- dotazy ----------
+// Ochutnávka má na všechno nejvýš 5 s (Petr 13. 11. 2026): dotazy se ukončí v termínu OCH_KONEC.
+let OCH_KONEC = Infinity;
 async function ochVolej(url, params, ms = 12000, pokus = 1) {
+  ms = Math.max(300, Math.min(ms, OCH_KONEC - performance.now()));
   const ctrl = new AbortController(); const t = setTimeout(() => ctrl.abort(), ms);
   try {
     const r = await fetch(url, { method: "POST", body: new URLSearchParams({ f: "json", ...params }), signal: ctrl.signal });
@@ -34,7 +37,7 @@ async function ochVolej(url, params, ms = 12000, pokus = 1) {
     if (d.error) throw new Error(d.error.message || "chyba služby");
     return d;
   } catch (e) {
-    if (pokus < 2) return ochVolej(url, params, ms, pokus + 1);  // jedno opakování při výpadku nebo vypršení
+    if (pokus < 2 && OCH_KONEC - performance.now() > 1500) return ochVolej(url, params, ms, pokus + 1);  // jedno opakování, když je čas
     throw e;
   } finally { clearTimeout(t); }
 }
@@ -85,15 +88,22 @@ function ochStred(poly) {
 }
 
 // Nejmenší vzdálenost k vrstvě do max_m: z geometrie, a když ji vrstva nevrací, půlením parametru distance.
-async function ochVzdalenostKVrstve(vrstva, dum, maxM) {
-  const f = await ochPrvky(vrstva, dum, { vzdalenost: maxM, pole: "*", geometrie: true });
-  if (!f.length) return null;
-  const d = f.map((x) => x.geometry ? ochVzdalenost(dum, x.geometry) : null).filter((x) => x !== null);
-  if (d.length) return Math.min(...d);
-  if (await ochPocet(vrstva, dum)) return 0;
-  let lo = 0, hi = maxM;
-  while (hi - lo > 2) { const mid = (lo + hi) / 2; if (await ochPocet(vrstva, dum, mid)) hi = mid; else lo = mid; }
-  return hi;
+async function ochVzdalenostKVrstve(vrstva, dum, maxM, bezGeometrie = false) {
+  if (!bezGeometrie) {   // vrstvy, které geometrii nevracejí (elektřina), rovnou souběžnými počty
+    const f = await ochPrvky(vrstva, dum, { vzdalenost: maxM, pole: "*", geometrie: true });
+    if (!f.length) return null;
+    const d = f.map((x) => x.geometry ? ochVzdalenost(dum, x.geometry) : null).filter((x) => x !== null);
+    if (d.length) return Math.min(...d);
+  }
+  // Vrstva bez geometrie: vzdálenost ve dvou kolech souběžných dotazů (místo pomalého půlení), přesnost cca 5 m.
+  const kolo = async (vzdalenosti) => (await Promise.all(vzdalenosti.map((v) => ochPocet(vrstva, dum, v || undefined).then((n) => n > 0))))
+    .findIndex(Boolean);
+  const hrube = [0, 25, 50, 100, 150, 200, 250, maxM];
+  const i = await kolo(hrube);
+  if (i <= 0) return i === 0 ? 0 : null;
+  const lo = hrube[i - 1], krok = (hrube[i] - lo) / 5, jemne = [1, 2, 3, 4, 5].map((k) => Math.round(lo + k * krok));
+  const j = await kolo(jemne);
+  return j < 0 ? hrube[i] : jemne[j];
 }
 async function ochDomeny(vrstva) {
   const m = await ochVolej(vrstva, {});
@@ -108,107 +118,114 @@ function ochBarvaHluku(lden, ln) {
 }
 const ochOk = (x) => x.status === "fulfilled";
 
-async function ochutnavkaVyhodnot(dum, jeDum) {
+// Každá oblast je samostatný slib: na webu se ukáže, jakmile je hotová (průběžné zobrazení, 13. 11. 2026).
+function ochutnavkaOblasti(dum) {
   const maxPasmo = async (vrstva, pole) => {
     const h = (await ochPrvky(vrstva, dum, { pole })).map((f) => parseFloat(f.attributes[pole])).filter((x) => !isNaN(x));
     return h.length ? Math.max(...h) : null;
   };
   const stred = ochStred(dum);
-  const ulohy = {
-    q100: ochVzdalenostKVrstve(`${OCH.ZAPLAVY}/9`, dum, 300),
-    q2002: ochVzdalenostKVrstve(`${OCH.ZAPLAVY}/10`, dum, 300),
-    aktivni: ochPocet(`${OCH.ZAPLAVY}/18`, dum),
-    lden: maxPasmo(`${OCH.HLUK}/9`, "LDEN"),
-    ln: maxPasmo(`${OCH.HLUK}/10`, "IPEN"),
-    radon: ochVolej(`${OCH.RADON}/1/query`, { where: "1=1", outFields: "radon_idx,radon_popis", returnGeometry: false,
+  const radek = (oblast, barva, text) => ({ oblast, barva, stav: OCH_STAV[barva], text });
+  const povodne = (async () => {
+    const [d100, d2002, akt] = await Promise.all([ochVzdalenostKVrstve(`${OCH.ZAPLAVY}/9`, dum, 300),
+      ochVzdalenostKVrstve(`${OCH.ZAPLAVY}/10`, dum, 300), ochPocet(`${OCH.ZAPLAVY}/18`, dum).catch(() => 0)]);
+    if (akt > 0 || d100 === 0) return radek("Povodně", "cervena", "Dům leží v záplavovém území stoleté vody" + (akt > 0 ? " (aktivní zóna)." : "."));
+    if (d2002 === 0) return radek("Povodně", "oranzova", "Dům je mimo stoletou vodu, ale v rozlivu povodně 2002" + (d100 ? ` (stoletá voda ${Math.round(d100)} m).` : "."));
+    return radek("Povodně", "zelena", "Mimo záplavové území" + (d100 ? `, hranice stoleté vody ${Math.round(d100)} m od domu.` : ", hranice dál než 300 m."));
+  })();
+  const hluk = (async () => {
+    const [lden, ln] = await Promise.all([maxPasmo(`${OCH.HLUK}/9`, "LDEN"), maxPasmo(`${OCH.HLUK}/10`, "IPEN")]);
+    const b = ochBarvaHluku(lden, ln);
+    return radek("Hluk", b, `U nejhlučnější fasády ve dne ${ochPasmo(lden)}, v noci ${ochPasmo(ln)}` + (b !== "zelena" ? " – nad doporučením WHO." : "."));
+  })();
+  const radon = (async () => {
+    const f = (await ochVolej(`${OCH.RADON}/1/query`, { where: "1=1", outFields: "radon_idx,radon_popis", returnGeometry: false,
       geometry: JSON.stringify({ x: stred[0], y: stred[1], spatialReference: { wkid: 5514 } }), geometryType: "esriGeometryPoint",
-      inSR: 5514, spatialRel: "esriSpatialRelIntersects" }).then((d) => d.features || []),
-    lokality: (async () => {
-      const url = `${OCH.MPP}/MPP_CUR_MPP_300_LOKALITY_P/FeatureServer/0`;
-      const [dom, f] = await Promise.all([ochDomeny(url), ochPrvky(url, dum, { pole: "nazev,stabilita,vyuziti_lok" })]);
-      return f.map((x) => ({ nazev: x.attributes.nazev, stabilita: dom.stabilita?.[x.attributes.stabilita] ?? x.attributes.stabilita,
-                             vyuziti: dom.vyuziti_lok?.[x.attributes.vyuziti_lok] ?? x.attributes.vyuziti_lok }));
-    })(),
-    koridory: (async () => {
-      const f = await ochPrvky(`${OCH.MPP}/MPP_CUR_MPP_600_DI_KORIDORY_P/FeatureServer/0`, dum, { vzdalenost: 100, pole: "objectid", geometrie: true });
-      const d = f.map((x) => x.geometry ? ochVzdalenost(dum, x.geometry) : null).filter((x) => x !== null);
-      return d.length ? Math.min(...d) : null;
-    })(),
-    vvn: ochVzdalenostKVrstve(`${OCH.ELEKTRINA}/13`, dum, 300),
-    arealy: ochPrvky(`${OCH.ZABAGED}/114`, dum, { vzdalenost: 500, pole: "typzast_k", geometrie: true }),
-  };
-  const klice = Object.keys(ulohy);
-  const v = Object.fromEntries((await Promise.allSettled(Object.values(ulohy))).map((r, i) => [klice[i], r]));
-  const o = [];
-
-  if (!ochOk(v.q100) || !ochOk(v.q2002)) o.push(["Povodně", "seda", "Mapa záplav teď neodpovídá; ověříme v Prověrce."]);
-  else {
-    const d100 = v.q100.value, d2002 = v.q2002.value, akt = ochOk(v.aktivni) && v.aktivni.value > 0;
-    if (akt || d100 === 0) o.push(["Povodně", "cervena", "Dům leží v záplavovém území stoleté vody" + (akt ? " (aktivní zóna)." : ".")]);
-    else if (d2002 === 0) o.push(["Povodně", "oranzova", "Dům je mimo stoletou vodu, ale v rozlivu povodně 2002" + (d100 ? ` (stoletá voda ${Math.round(d100)} m).` : ".")]);
-    else o.push(["Povodně", "zelena", "Mimo záplavové území" + (d100 ? `, hranice stoleté vody ${Math.round(d100)} m od domu.` : ", hranice dál než 300 m.")]);
-  }
-  if (!ochOk(v.lden) || !ochOk(v.ln)) o.push(["Hluk", "seda", "Hluková mapa teď neodpovídá; ověříme v Prověrce."]);
-  else {
-    const b = ochBarvaHluku(v.lden.value, v.ln.value);
-    o.push(["Hluk", b, `U nejhlučnější fasády ve dne ${ochPasmo(v.lden.value)}, v noci ${ochPasmo(v.ln.value)}` + (b !== "zelena" ? " – nad doporučením WHO." : ".")]);
-  }
-  if (!ochOk(v.radon) || !v.radon.value.length) o.push(["Radon", "seda", "Mapa radonu pro tento bod nemá údaj."]);
-  else {
-    const a = v.radon.value[0].attributes, idx = a.radon_idx;
-    o.push(["Radon", OCH_RADON[idx] || "seda", `Radonový index podloží ${a.radon_popis || idx} (${idx} ze 3); o domě rozhodne měření.`]);
-  }
-  if (!ochOk(v.lokality) || !v.lokality.value.length) o.push(["Územní plán", "seda", "Metropolitní plán teď neodpovídá; ověříme v Prověrce."]);
-  else {
-    const l = v.lokality.value[0], kor = ochOk(v.koridory) ? v.koridory.value : null;
-    let t = [`Lokalita ${l.nazev || ""}`.trim(), [l.stabilita, l.vyuziti].filter(Boolean).join(", ")].filter(Boolean).join(": ");
-    if (kor !== null) t += `; dopravní koridor ${kor.toFixed(1).replace('.', ',')} m od domu`;
-    o.push(["Územní plán", String(l.stabilita).startsWith("stabilizovan") && kor === null ? "zelena" : "oranzova", t + "."]);
-  }
-  const nalezy = []; let barva = "zelena";
-  if (ochOk(v.vvn) && v.vvn.value !== null) {
-    nalezy.push(`vedení velmi vysokého napětí ${Math.round(v.vvn.value)} m od domu` + (v.vvn.value > 25 ? " (mimo ochranné pásmo)" : ""));
-    if (v.vvn.value <= 25) barva = "oranzova";
-  }
-  if (ochOk(v.arealy)) for (const f of v.arealy.value) {
-    const def = OCH_AREALY[String(f.attributes.typzast_k)]; if (!def || !f.geometry) continue;
-    const d = Math.round(ochVzdalenost(dum, f.geometry));
-    if (d <= def[0]) { nalezy.push(`${def[1]} ${d} m`); barva = "oranzova"; }
-  }
-  o.push(["Okolí", barva, nalezy.length ? `V okolí: ${[...new Set(nalezy)].join("; ")}.` : "Bez průmyslu, čistírny, střelnice či vedení velmi vysokého napětí v blízkosti."]);
-  return o.map(([oblast, b, text]) => ({ oblast, barva: b, stav: OCH_STAV[b], text }));
+      inSR: 5514, spatialRel: "esriSpatialRelIntersects" })).features || [];
+    if (!f.length) return radek("Radon", "seda", "Mapa radonu pro tento bod nemá údaj.");
+    const a = f[0].attributes, idx = a.radon_idx;
+    return radek("Radon", OCH_RADON[idx] || "seda", `Radonový index podloží ${a.radon_popis || idx} (${idx} ze 3); o domě rozhodne měření.`);
+  })();
+  const plan = (async () => {
+    const url = `${OCH.MPP}/MPP_CUR_MPP_300_LOKALITY_P/FeatureServer/0`;
+    const korP = ochPrvky(`${OCH.MPP}/MPP_CUR_MPP_600_DI_KORIDORY_P/FeatureServer/0`, dum, { vzdalenost: 100, pole: "objectid", geometrie: true })
+      .then((f) => { const d = f.map((x) => x.geometry ? ochVzdalenost(dum, x.geometry) : null).filter((x) => x !== null); return d.length ? Math.min(...d) : null; })
+      .catch(() => null);
+    const [dom, f, kor] = await Promise.all([ochDomeny(url), ochPrvky(url, dum, { pole: "nazev,stabilita,vyuziti_lok" }), korP]);
+    if (!f.length) return radek("Územní plán", "seda", "Metropolitní plán pro tento dům nemá údaj; ověříme v Prověrce.");
+    const a = f[0].attributes;
+    const l = { nazev: a.nazev, stabilita: dom.stabilita?.[a.stabilita] ?? a.stabilita, vyuziti: dom.vyuziti_lok?.[a.vyuziti_lok] ?? a.vyuziti_lok };
+    let text = [`Lokalita ${l.nazev || ""}`.trim(), [l.stabilita, l.vyuziti].filter(Boolean).join(", ")].filter(Boolean).join(": ");
+    if (kor !== null) text += `; dopravní koridor ${kor.toFixed(1).replace(".", ",")} m od domu`;
+    return radek("Územní plán", String(l.stabilita).startsWith("stabilizovan") && kor === null ? "zelena" : "oranzova", text + ".");
+  })();
+  const okoli = (async () => {
+    const [vvn, arealy] = await Promise.all([ochVzdalenostKVrstve(`${OCH.ELEKTRINA}/13`, dum, 300, true).catch(() => null),
+      ochPrvky(`${OCH.ZABAGED}/114`, dum, { vzdalenost: 500, pole: "typzast_k", geometrie: true }).catch(() => [])]);
+    const nalezy = []; let barva = "zelena";
+    if (vvn !== null) { nalezy.push(`vedení velmi vysokého napětí ${Math.round(vvn)} m od domu` + (vvn > 25 ? " (mimo ochranné pásmo)" : "")); if (vvn <= 25) barva = "oranzova"; }
+    for (const f of arealy) {
+      const def = OCH_AREALY[String(f.attributes.typzast_k)]; if (!def || !f.geometry) continue;
+      const d = Math.round(ochVzdalenost(dum, f.geometry));
+      if (d <= def[0]) { nalezy.push(`${def[1]} ${d} m`); barva = "oranzova"; }
+    }
+    return radek("Okolí", barva, nalezy.length ? `V okolí: ${[...new Set(nalezy)].join("; ")}.` : "Bez průmyslu, čistírny, střelnice či vedení velmi vysokého napětí v blízkosti.");
+  })();
+  return { "Povodně": povodne, "Hluk": hluk, "Radon": radon, "Územní plán": plan, "Okolí": okoli };
 }
 
 // ---------- zobrazení ----------
-async function ochutnavka(soKod, cil) {
+const OCH_ZAMCENE = `
+  <tr class="och-zamceno"><th scope="row">Právní stav</th><td><span class="och-znacka zam">V Prověrce</span></td><td>Věcná břemena, zástavy, exekuce a plomby z výpisu z katastru, insolvence majitele.</td></tr>
+  <tr class="och-zamceno"><th scope="row">Co udělat</th><td><span class="och-znacka zam">V Prověrce</span></td><td>Verdikt jednou větou a úkoly na míru před rezervací, podpisem a převodem.</td></tr>
+  <tr class="och-zamceno och-cena"><th scope="row">Cena</th><td><span class="och-znacka zam">V Prověrce PLUS</span></td><td>Odhad ceny ze skutečných prodejů v katastru (u bytu z prodejů v tomtéž domě, u domu z podobných domů v okolí) a srovnání s cenou v inzerátu: víte, jestli nepřeplácíte, a máte argumenty k vyjednávání.</td></tr>`;
+
+async function ochutnavka(soKod, cil, { start = performance.now(), obrys: znamy } = {}) {
+  OCH_KONEC = start + 5000;
   cil.innerHTML = `<p class="tlumene">Prověřujeme povodně, hluk, radon, územní plán a okolí…</p>`;
-  const start = performance.now();
   try {
-    const d = await ochVolej(`${OCH.RUIAN}/3/query`, { where: `kod=${Number(soKod)}`, outFields: "kod", returnGeometry: true, outSR: 5514 });
-    const dum = d.features?.[0]?.geometry?.rings;
+    const dum = znamy || (await ochVolej(`${OCH.RUIAN}/3/query`, { where: `kod=${Number(soKod)}`, outFields: "kod", returnGeometry: true, outSR: 5514 }, 3000)).features?.[0]?.geometry?.rings;
     if (!dum) throw new Error("obrys budovy v RÚIAN chybí");
-    const oblasti = await ochutnavkaVyhodnot(dum);
-    const s = ((performance.now() - start) / 1000).toFixed(1).replace(".", ",");
-    // Letecký snímek ČÚZK s obrysem domu (výřez 140 × 100 m kolem domu).
+    // Letecký snímek ČÚZK, dům tyrkysově a šrafovaně (výřez 140 × 100 m kolem domu).
     const [cx, cy] = ochStred(dum), w = 140, h = 100, bbox = [cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2];
     const obr = `${OCH.ORTOFOTO}/export?bbox=${bbox.join(",")}&bboxSR=5514&imageSR=5514&size=700,500&format=jpg&f=image`;
     const sx = (x) => ((x - bbox[0]) / w * 700).toFixed(1), sy = (y) => ((bbox[3] - y) / h * 500).toFixed(1);
-    const obrys = dum.map((r) => `<polygon points="${r.map(([x, y]) => `${sx(x)},${sy(y)}`).join(" ")}" fill="none" stroke="#fff" stroke-width="3"/>`).join("");
-    const pocty = ["cervena", "oranzova", "zelena", "seda"].map((k) => [k, oblasti.filter((x) => x.barva === k).length]).filter(([, n]) => n);
-    const shrnuti = pocty.map(([k, n]) => `${n}× ${OCH_STAV[k].toLowerCase()}`).join(" · ");
+    const body = dum.map((r) => r.map(([x, y]) => `${sx(x)},${sy(y)}`).join(" "));
+    const obrys = `<defs><pattern id="och-sraf" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+        <rect width="8" height="8" fill="rgba(40,220,255,.25)"/><line x1="0" y1="0" x2="0" y2="8" stroke="#28dcff" stroke-width="3"/></pattern></defs>` +
+      body.map((b) => `<polygon points="${b}" fill="url(#och-sraf)" stroke="#0a1e3c" stroke-width="6"/><polygon points="${b}" fill="none" stroke="#28dcff" stroke-width="3"/>`).join("");
+    const oblasti = ochutnavkaOblasti(dum);
     cil.innerHTML = `<details class="sbal ochutnavka" open>
-      <summary><span class="hlavicka-sbal"><h2>Přehled zdarma</h2><span class="shrnuti">${shrnuti}</span></span><span class="prepinac" aria-hidden="true"></span></summary>
-      <figure class="och-snimek"><img src="${obr}" alt="Letecký snímek okolí domu" width="700" height="500" loading="lazy">
-        <svg viewBox="0 0 700 500" aria-hidden="true">${obrys}</svg><figcaption>Letecký snímek ČÚZK, bíle obrys domu.</figcaption></figure>
+      <summary><span class="hlavicka-sbal"><h2>Přehled zdarma</h2><span class="shrnuti">prověřujeme…</span></span><span class="prepinac" aria-hidden="true"></span></summary>
+      <figure class="och-snimek"><img src="${obr}" alt="Letecký snímek okolí domu" width="700" height="500">
+        <svg viewBox="0 0 700 500" aria-hidden="true">${obrys}</svg><figcaption>Letecký snímek ČÚZK, prověřovaný dům tyrkysově.</figcaption></figure>
       <table class="och-tabulka"><tbody>
-        ${oblasti.map((x) => `<tr><th scope="row">${esc(x.oblast)}</th><td><span class="och-znacka ${x.barva}">${x.stav}</span></td><td>${esc(x.text)}</td></tr>`).join("")}
-        <tr class="och-zamceno"><th scope="row">Právní stav</th><td><span class="och-znacka zam">v Prověrce</span></td><td>Věcná břemena, zástavy, exekuce a plomby z výpisu z katastru, insolvence majitele.</td></tr>
-        <tr class="och-zamceno"><th scope="row">Cena</th><td><span class="och-znacka zam">v PLUS</span></td><td>Odhad ze skutečných prodejů v katastru a srovnání s cenou v inzerátu.</td></tr>
-        <tr class="och-zamceno"><th scope="row">Co udělat</th><td><span class="och-znacka zam">v Prověrce</span></td><td>Verdikt jednou větou a úkoly na míru před rezervací, podpisem a převodem.</td></tr>
+        ${Object.keys(oblasti).map((n) => `<tr class="och-ceka" data-oblast="${esc(n)}"><th scope="row">${esc(n)}</th><td><span class="och-znacka ceka">Prověřujeme</span></td><td><span class="och-nacitani"></span></td></tr>`).join("")}
+        ${OCH_ZAMCENE}
       </tbody></table>
-      <p class="tlumene">Hotovo za ${s} s z veřejných map (Geoportál hl. m. Prahy, ČGS, IPR Praha, ČÚZK) k dnešnímu dni. Orientační přehled pro celý dům; plná Prověrka posuzuje i pozemky, zdroje hluku a výšku nad hladinou. Není to právní ani znalecký posudek.</p>
+      <p class="tlumene">Z veřejných map (Geoportál hl. m. Prahy, ČGS, IPR Praha, ČÚZK) k dnešnímu dni. Orientační přehled pro celý dům; plná Prověrka posuzuje i pozemky, zdroje hluku a výšku nad hladinou. Není to právní ani znalecký posudek.</p>
     </details>`;
+    const hotove = {};
+    const vypln = (x) => {
+      if (hotove[x.oblast]) return;
+      hotove[x.oblast] = x;
+      const tr = cil.querySelector(`tr[data-oblast="${x.oblast}"]`);
+      tr.classList.remove("och-ceka");
+      tr.innerHTML = `<th scope="row">${esc(x.oblast)}</th><td><span class="och-znacka ${x.barva}">${x.stav}</span></td><td>${esc(x.text)}</td>`;
+    };
+    const nestihlo = (n) => ({ oblast: n, barva: "seda", stav: OCH_STAV.seda, text: "Mapová služba teď neodpověděla včas; ověříme v Prověrce." });
+    await Promise.race([
+      Promise.all(Object.entries(oblasti).map(([n, p]) => p.then(vypln, () => vypln(nestihlo(n))))),
+      new Promise((r) => setTimeout(r, Math.max(0, OCH_KONEC - performance.now()))),
+    ]);
+    Object.keys(oblasti).forEach((n) => vypln(nestihlo(n)));   // co nestihlo do 5 s
+    const vsechny = Object.values(hotove);
+    const pocty = ["cervena", "oranzova", "zelena", "seda"].map((k) => [k, vsechny.filter((x) => x.barva === k).length]).filter(([, n]) => n);
+    cil.querySelector(".shrnuti").textContent = pocty.map(([k, n]) => `${n}× ${OCH_STAV[k].toLowerCase()}`).join(" · ");
+    cil.dispatchEvent(new CustomEvent("ochutnavka-hotovo", { detail: { oblasti: vsechny, ms: Math.round(performance.now() - start) }, bubbles: true }));
   } catch (e) {
     cil.innerHTML = `<p class="poznamka">Přehled se teď nepodařilo načíst (${esc(e.message)}). Zkuste to prosím za chvíli znovu.</p>`;
+  } finally {
+    OCH_KONEC = Infinity;
   }
 }

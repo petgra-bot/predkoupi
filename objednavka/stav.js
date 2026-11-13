@@ -1,39 +1,169 @@
-// Stránka objednávky: průběh prověrky, výběr bytu a výsledek přímo v prohlížeči (rozhodnutí 13. 11. 2026).
+// Stránka objednávky (13. 11. 2026, poznámky Petra): poutavý průběh prověrky a po dokončení bílá stránka
+// s reportem navrženým i pro mobil. Kroky odpovídají skutečným krokům prověrky, časování zpráv je přibližné.
 (() => {
   const N = window.OBJEDNAVKY;
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   const token = new URLSearchParams(location.search).get("t") || "";
-  let casovac = null, posledni = "";
+  const tiche = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let casovac = null, posledniStav = "", vykreslenProbeh = false, ticker = null;
+
+  // Co se v kterém kroku skutečně děje (zprávy se střídají, hotový krok se odškrtne).
+  const ZPRAVY = [
+    ["Platba přijata, děkujeme"],
+    ["Stahujeme aktuální výpis z katastru nemovitostí", "Čteme vlastníky, podíly a parcely", "Ověřujeme dům v registru budov a adres"],
+    ["Měříme vzdálenost ke stoleté vodě a povodni 2002", "Čteme hlukovou mapu u nejhlučnější fasády", "Kontrolujeme radonový index podloží",
+     "Procházíme Metropolitní plán, koridory a uzávěry", "Hledáme dům v dokumentaci EIA", "Mapujeme vedení vysokého napětí a areály v okolí"],
+    ["Hledáme věcná břemena, zástavy, exekuce a plomby", "Ověřujeme vlastníky v insolvenčním rejstříku", "Vyhodnocujeme stavby a záměry v okolí"],
+    ["Skládáme verdikt a přehled šesti oblastí", "Píšeme úkoly na míru před rezervací, podpisem a převodem", "Vytváříme PDF"],
+    ["Kontrolujeme čísla proti zdrojům", "Nezávislý hodnotitel čte report očima kupujícího"],
+  ];
+  const ZPRAVY_PLUS = "Porovnáváme cenu se skutečnými prodeji v katastru";
+  const VAHY = [2, 15, 20, 25, 25, 13];   // přibližný podíl kroků na celkovém čase
 
   const karta = (trida, nadpis, obsah) => `<div class="karta ${trida}"><h2>${esc(nadpis)}</h2>${obsah}</div>`;
-  const kroky = (faze) => `<ol class="obj-kroky">${faze.map((f) => `<li class="${f.hotovo ? "hotovo" : ""}">${esc(f.nazev)}</li>`).join("")}</ol>`;
+  const ochutnavka = (() => { try { return JSON.parse(sessionStorage.getItem("predkoupi-ochutnavka") || "null"); } catch { return null; } })();
 
+  // ---------- průběh ----------
+  function probeh(o) {
+    if (!vykreslenProbeh) {
+      vykreslenProbeh = true;
+      const zpravy = ZPRAVY.map((z, i) => i === 3 && o.balicek.includes("PLUS") ? [...z, ZPRAVY_PLUS] : z);
+      const snimek = o.letecky ? `<img src="${N.api}${o.letecky}" alt="Letecký snímek domu">` : ochutnavka?.snimek || "";
+      $("objednavka").innerHTML = `
+        <div class="pr">
+          <figure class="pr-snimek${snimek ? "" : " pr-bez"}">${snimek}<span class="pr-sken" aria-hidden="true"></span>
+            <figcaption>Prověřujeme <b>${esc(o.adresa.split(",").slice(0, 2).join(","))}</b></figcaption></figure>
+          <div class="pr-hlavni">
+            <div class="pr-ukazatel" role="progressbar" aria-label="Průběh prověrky" aria-valuemin="0" aria-valuemax="100">
+              <span class="pr-procenta">0 %</span><span class="pr-cas"></span><div class="pr-pruh"><i></i></div></div>
+            <ol class="pr-kroky">${o.faze.map((f, i) => `<li data-i="${i}"><span class="pr-ikona" aria-hidden="true"></span>
+              <div><b>${esc(f.nazev)}</b><ul class="pr-zpravy">${zpravy[i].map((z) => `<li>${esc(z)}</li>`).join("")}</ul></div></li>`).join("")}</ol>
+            <p class="pr-odejit">Stránku můžete zavřít – report pošleme e-mailem a uvidíte ho i tady. Zpravidla do ${o.dodani_min} minut.</p>
+          </div>
+          ${ochutnavka?.oblasti?.length ? `<div class="pr-vime"><h3>Co už víme z přehledu zdarma</h3><ul>${ochutnavka.oblasti.map((x) =>
+            `<li><span class="pr-tecka ${esc(x.barva)}"></span><b>${esc(x.oblast)}</b> ${esc(x.text)}</li>`).join("")}</ul>
+            <p>V reportu k tomu přidáme právní stav z katastru, verdikt a úkoly na míru.</p></div>` : ""}
+        </div>`;
+      clearInterval(ticker);
+      ticker = setInterval(() => posunZpravu(), tiche ? 4000 : 2600);
+    }
+    if (o.letecky && !$("objednavka").querySelector(".pr-snimek img[src*='letecky']")) {
+      const f = $("objednavka").querySelector(".pr-snimek");
+      f.classList.remove("pr-bez");
+      f.querySelector("img")?.remove();
+      f.insertAdjacentHTML("afterbegin", `<img src="${N.api}${o.letecky}" alt="Letecký snímek domu">`);
+    }
+    const hotovo = o.faze.map((f) => f.hotovo);
+    const aktivni = hotovo.indexOf(false);
+    $("objednavka").querySelectorAll(".pr-kroky > li").forEach((li, i) => {
+      li.classList.toggle("hotovo", hotovo[i]);
+      li.classList.toggle("aktivni", i === aktivni);
+      if (hotovo[i]) li.querySelectorAll(".pr-zpravy li").forEach((z) => z.classList.add("ok"));
+    });
+    // Odhad procent: hotové kroky + uplynulý čas v aktivním kroku (nikdy přes 96 %, dokud není hotovo).
+    const celkem = o.dodani_min * 60, zaKroky = VAHY.reduce((s, v, i) => s + (hotovo[i] ? v : 0), 0);
+    const casove = Math.min(96, (o.bezi_s / celkem) * 100);
+    const pct = Math.round(Math.min(96, Math.max(zaKroky, casove, 3)));
+    const u = $("objednavka").querySelector(".pr-ukazatel");
+    u.setAttribute("aria-valuenow", pct);
+    u.querySelector(".pr-procenta").textContent = `${pct} %`;
+    u.querySelector(".pr-pruh i").style.width = `${pct}%`;
+    const zbyva = Math.max(1, Math.ceil((celkem - o.bezi_s) / 60));
+    u.querySelector(".pr-cas").textContent = o.bezi_s < celkem ? `zbývá asi ${zbyva} min` : "už jen chvilku";
+  }
+
+  function posunZpravu() {
+    const li = $("objednavka").querySelector(".pr-kroky > li.aktivni");
+    if (!li) return;
+    const zpravy = [...li.querySelectorAll(".pr-zpravy li")];
+    const ted = zpravy.findIndex((z) => z.classList.contains("bezi"));
+    if (ted >= 0 && ted < zpravy.length - 1) { zpravy[ted].classList.replace("bezi", "ok"); zpravy[ted + 1].classList.add("bezi"); }
+    else if (ted < 0) zpravy.find((z) => !z.classList.contains("ok"))?.classList.add("bezi");
+  }
+
+  // ---------- výsledek: bílá stránka s reportem pro mobil i počítač ----------
+  const BARVY = { cervena: "Riziko", oranzova: "Pozor", zelena: "V pořádku", seda: "Nezjištěno", zamceno: "V Prověrce PLUS" };
+  const FAZE = { "pred-rezervaci": "Před rezervací", "pred-podpisem": "Před podpisem kupní smlouvy", "pri-prevodu": "Při převodu a po koupi",
+                 "pred-drazbou": "Před dražbou", "po-priklepu": "Po příklepu" };
+  const stitek = (b) => `<span class="rp-stitek ${esc(b)}">${esc(BARVY[b] || b)}</span>`;
+
+  async function vysledek(o) {
+    clearInterval(ticker);
+    document.body.classList.add("bily-report");
+    $("objednavka").innerHTML = `<p class="rp-nacitam">Načítáme report…</p>`;
+    let k;
+    try {
+      const r = await fetch(`${N.api}${o.report.data}`);
+      if (!r.ok) throw new Error();
+      k = await r.json();
+    } catch {
+      $("objednavka").innerHTML = karta("chyba", "Report se nepodařilo načíst", `<p>Najdete ho v e-mailu, nebo si stáhněte PDF.</p>${pdfOdkazy(o)}`);
+      return;
+    }
+    const ulozene = (() => { try { return JSON.parse(localStorage.getItem(`predkoupi-ukoly-${token}`) || "{}"); } catch { return {}; } })();
+    const skupiny = {};
+    (k.ukoly || []).forEach((u, i) => { (skupiny[u.kdy] ||= []).push([u, i]); });
+    $("objednavka").innerHTML = `
+      <article class="rp">
+        <header class="rp-hlava">
+          <p class="rp-stitek-nad">Report · ${esc(o.balicek)} · č. ${esc(o.cislo)}</p>
+          <h1>${esc(k.nemovitost?.nazev)}</h1>
+          ${k.nemovitost?.popis ? `<p class="rp-popis">${esc(k.nemovitost.popis)}</p>` : ""}
+        </header>
+        ${k.letecky ? `<figure class="rp-snimek"><img src="${N.api}${k.letecky}" alt="Letecký snímek domu" loading="lazy">
+          <figcaption>Letecký snímek ČÚZK; oranžově pozemky, tyrkysově dům.</figcaption></figure>` : ""}
+        <section class="rp-verdikt ${esc(k.verdikt?.barva)}"><p class="rp-stitek-nad">Verdikt</p>
+          <p class="rp-verdikt-text">${esc(k.verdikt?.text)}</p>
+          ${(k.verdikt?.stitky || []).length ? `<p class="rp-stitky">${k.verdikt.stitky.map((s) => `<span class="${esc(s.barva)}">${esc(s.text)}</span>`).join("")}</p>` : ""}
+        </section>
+        ${k.cena ? `<section class="rp-cena ${esc(k.cena.barva)}"><h2>Cena proti trhu</h2>
+          <dl><div><dt>${esc(k.cena.popisek || "Požadovaná cena")}</dt><dd>${esc(k.cena.pozadovana)}</dd></div>
+          <div><dt>Trh v okolí</dt><dd>${esc(k.cena.trh)}</dd></div><div><dt>Rozdíl</dt><dd>${esc(k.cena.odchylka)}</dd></div></dl>
+          <p>${esc(k.cena.text)}</p></section>`
+          : `<section class="rp-plus"><p><b>Nepřeplácíte?</b> Odhad ceny ze skutečných prodejů v katastru je součástí Prověrky PLUS – doplatek 500 Kč, rizika už máme.</p></section>`}
+        <section><h2>Přehled</h2><ul class="rp-prehled">${(k.semafor || []).map((s) => `<li class="${esc(s.barva)}">
+          <span class="rp-oblast">${esc(s.oblast)}</span>${stitek(s.barva)}<span class="rp-text">${esc(s.text)}</span></li>`).join("")}</ul></section>
+        ${(k.hlavni_zjisteni || []).length ? `<section><h2>Hlavní zjištění</h2>${k.hlavni_zjisteni.map((z) => `
+          <div class="rp-zjisteni ${esc(z.barva)}">${stitek(z.barva)}<h3>${esc(z.titulek)}</h3><p>${esc(z.text)}</p>
+          ${z.co_delat ? `<p class="rp-co">→ ${esc(z.co_delat)}</p>` : ""}</div>`).join("")}</section>` : ""}
+        ${(k.ukoly || []).length ? `<section><h2>Co udělat</h2><p class="rp-nap">Odškrtávejte si, co máte hotové – uložíme to v tomto prohlížeči.</p>
+          ${Object.entries(skupiny).map(([kdy, polozky]) => `<h3 class="rp-faze">${esc(FAZE[kdy] || kdy)}</h3><ul class="rp-ukoly">${polozky.map(([u, i]) => `
+            <li><label><input type="checkbox" data-u="${i}"${ulozene[i] ? " checked" : ""}><span>${esc(u.ukol)}
+            ${u.komu ? `<em>${esc(u.komu)}</em>` : ""}</span></label></li>`).join("")}</ul>`).join("")}</section>` : ""}
+        ${(k.dalsi_zjisteni || []).length ? `<section><h2>Další zjištění</h2><ul class="rp-dalsi">${k.dalsi_zjisteni.map((z) =>
+          `<li class="${esc(z.barva)}"><b>${esc(z.titulek)}</b> ${esc(z.text)}</li>`).join("")}</ul></section>` : ""}
+        ${(k.nezjisteno || []).length ? `<details class="rp-sbal"><summary>Co jsme nezjistili (${k.nezjisteno.length})</summary><ul>${k.nezjisteno.map((x) => `<li>${esc(x)}</li>`).join("")}</ul></details>` : ""}
+        ${(k.zdroje || []).length ? `<details class="rp-sbal"><summary>Z čeho vycházíme</summary><ul>${k.zdroje.map((x) => `<li>${esc(x)}</li>`).join("")}</ul></details>` : ""}
+        <p class="rp-upozorneni">${esc(k.upozorneni || "Report není právní ani znalecký posudek.")}</p>
+      </article>
+      <div class="rp-lista">${pdfOdkazy(o)}</div>`;
+    $("objednavka").querySelectorAll("input[data-u]").forEach((c) => c.addEventListener("change", () => {
+      ulozene[c.dataset.u] = c.checked;
+      try { localStorage.setItem(`predkoupi-ukoly-${token}`, JSON.stringify(ulozene)); } catch { /* bez úložiště */ }
+    }));
+  }
+
+  const pdfOdkazy = (o) => (o.report?.pdf || []).map((u, i, a) =>
+    `<a class="tl tmave-tl" href="${N.api}${u}" download>${a.length > 1 ? (i ? "Podrobný report (PDF)" : "Základní report (PDF)") : "Stáhnout PDF"}</a>`).join("");
+
+  // ---------- ostatní stavy ----------
   function vykresli(o) {
-    $("nadpis").textContent = `${o.balicek} č. ${o.cislo}`;
+    $("nadpis").textContent = o.stav === "hotovo" ? "Report je hotový" : `${o.balicek} č. ${o.cislo}`;
     $("podnadpis").textContent = o.adresa;
+    if (o.stav === "zaplaceno" || o.stav === "bezi") return probeh(o);
+    vykreslenProbeh = false; clearInterval(ticker);
+    if (o.stav === "hotovo") return vysledek(o);
     const obsah = {
       ceka_na_platbu: () => karta("upresnit", "Čekáme na potvrzení platby", `<p class="tlumene">Jakmile platební brána platbu potvrdí, prověrka se spustí sama. Obvykle to trvá pár vteřin.</p>`),
       zruseno: () => karta("chyba", "Platba nebyla dokončena", `<p class="tlumene">Nic jsme nestrhli. Objednávku můžete zopakovat.</p><p><a href="/proverit/?q=${encodeURIComponent(o.adresa)}">Zpět k nemovitosti</a></p>`),
       zkusebni: () => karta("upresnit", "Zkušební platba proběhla", `<p class="tlumene">Platby spouštíme v nejbližších dnech. Ve zkušebním provozu se prověrka nespouští a nic se neplatí.</p>`),
-      zaplaceno: () => prubeh(o),
-      bezi: () => prubeh(o),
       potrebuje_klienta: () => karta("upresnit", "Který z těchto bytů?", `<p class="tlumene">Podle plochy odpovídá v domě víc bytů. Vyberte ten správný, report pak dokončíme do pár minut.</p>
         <ul class="kandidati">${(o.kandidati || []).map((k) => `<li><button type="button" data-byt="${esc(k.cislo)}">Byt č. ${esc(k.cislo)}${k.plocha_m2 ? ` <span class="tlumene">· podle podílu cca ${esc(k.plocha_m2)} m²</span>` : ""}</button></li>`).join("")}</ul>`),
-      hotovo: () => vysledek(o),
-      chyba: () => karta("chyba", "Report řešíme ručně", `<p class="tlumene">Při vytváření se objevil problém. Ozveme se e-mailem nejpozději do 24 hodin; když report nedodáme, vrátíme celou cenu.</p>`),
+      chyba: () => karta("chyba", "Report řešíme ručně", `<p class="tlumene">Při vytváření se objevil problém. Ozveme se e-mailem nejpozději do 24 hodin; když report nedodáme, vrátíme celé peníze.</p>`),
     }[o.stav];
     $("objednavka").innerHTML = obsah ? obsah() : karta("chyba", "Neznámý stav", "");
     $("objednavka").querySelectorAll("button[data-byt]").forEach((b) => b.addEventListener("click", () => vyberByt(b.dataset.byt)));
-  }
-
-  const prubeh = (o) => karta("och-karta", "Prověřujeme", `${kroky(o.faze)}
-    <p class="tlumene">Report zpravidla do ${o.dodani_min} minut. Stránku můžete zavřít – report pošleme e-mailem a uvidíte ho i tady.</p>`);
-
-  function vysledek(o) {
-    const pdf = o.report.pdf.map((u, i) => `<a class="tl svetle" href="${N.api}${u}" download>${o.report.pdf.length > 1 ? (i ? "Podrobný report (PDF)" : "Základní report (PDF)") : "Stáhnout report (PDF)"}</a>`).join("");
-    return karta("ok", "Report je hotový", `<p class="tlumene">Poslali jsme ho i na váš e-mail. Odkaz na tuto stránku platí 30 dnů.</p><div class="obj-pdf">${pdf}</div>`) +
-      `<iframe class="obj-report" title="Report" src="${N.api}${o.report.html}" loading="lazy"></iframe>`;
   }
 
   async function vyberByt(cislo) {
@@ -50,13 +180,16 @@
       const r = await fetch(`${N.api}/objednavka/${encodeURIComponent(token)}`);
       if (r.status === 404) { $("nadpis").textContent = "Objednávka nenalezena"; $("objednavka").innerHTML = karta("chyba", "Odkaz nefunguje", `<p class="tlumene">Zkontrolujte odkaz z e-mailu, nebo napište na info@predkoupi.cz.</p>`); return; }
       const o = await r.json();
-      const otisk = JSON.stringify(o);
-      if (otisk !== posledni) { posledni = otisk; vykresli(o); }
+      const otisk = JSON.stringify({ ...o, bezi_s: 0 });
+      if (o.stav === "zaplaceno" || o.stav === "bezi") probeh(o), vykresliHlavicku(o);
+      else if (otisk !== posledniStav) vykresli(o);
+      posledniStav = otisk;
       if (!["hotovo", "zruseno", "zkusebni", "chyba"].includes(o.stav)) casovac = setTimeout(nacti, o.stav === "ceka_na_platbu" ? 2500 : 4000);
     } catch {
       casovac = setTimeout(nacti, 6000);
     }
   }
+  const vykresliHlavicku = (o) => { $("nadpis").textContent = `${o.balicek} č. ${o.cislo}`; $("podnadpis").textContent = o.adresa; };
 
   if (!token) { $("nadpis").textContent = "Objednávka nenalezena"; } else nacti();
 })();

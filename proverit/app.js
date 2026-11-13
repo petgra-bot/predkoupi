@@ -93,8 +93,9 @@ async function adresyUBodu(lat, lon, metru) {
 async function budovy(kody) {
   const unikatni = [...new Set(kody)].filter(Boolean);
   if (!unikatni.length) return {};
-  const d = await dotaz(`${PROHLIZECI}/3/query`, { where: `kod in (${unikatni.join(",")})`, outFields: "*", returnGeometry: false });
-  return Object.fromEntries((d.features || []).map((f) => [f.attributes.kod, f.attributes]));
+  // Obrys budovy (S-JTSK) rovnou s údaji: ochutnávka ho pak nemusí načítat znovu (rychlost, 13. 11. 2026).
+  const d = await dotaz(`${PROHLIZECI}/3/query`, { where: `kod in (${unikatni.join(",")})`, outFields: "*", returnGeometry: true, outSR: 5514 });
+  return Object.fromEntries((d.features || []).map((f) => [f.attributes.kod, { ...f.attributes, obrys: f.geometry?.rings }]));
 }
 
 async function mestskaCast(kod) {
@@ -362,7 +363,7 @@ async function zobrazBudovu(adresa, inz, puvod) {
   nacitam("Načítám údaje o budově…");
   const b = (await budovy([adresa.so]))[adresa.so];
   if (!b) throw new Error("Budovu k adrese se v RÚIAN nepodařilo načíst");
-  const mc = await mestskaCast(b.momc);
+  const mcSlib = mestskaCast(b.momc).catch(() => null);   // nečekáme: doplní se do tabulky, až přijde
   const { typ, zpusob } = typBudovy(b);
 
   const upozorneni = [];
@@ -373,7 +374,7 @@ async function zobrazBudovu(adresa, inz, puvod) {
   const rok = b.dokonceni ? new Date(b.dokonceni).getFullYear() : null;
   const radky = [
     ["Adresa", adresa.adresa],
-    ["Městská část", mc || "–"],
+    ["Městská část", "…"],
     ["Typ", typ === zpusob ? typ : `${typ} (v RÚIAN: ${zpusob})`],
     ["Čísla popisná budovy", b.cisladomovni],
     ["Bytů v budově", b.pocetbytu ?? "–"],
@@ -422,7 +423,8 @@ async function zobrazBudovu(adresa, inz, puvod) {
       <div class="co-dal-zajem" data-zajem data-zdroj="${esc(("mimo:" + obec).slice(0, 40))}" data-stitek="E-mail pro oznámení, až budeme prověřovat i v obci ${esc(obec)}"
         data-souhlas="Pošleme jedinou zprávu, až službu rozšíříme do vaší obce, a pak e-mail smažeme. Ukládáme jen e-mail a název obce."
         data-hotovo="až budeme prověřovat i ve vaší obci"></div></div>`);
-  if ($("ochutnavka")) ochutnavka(adresa.so, $("ochutnavka"));
+  mcSlib.then((mc) => { const dd = [...$("vysledek").querySelectorAll("dt")].find((x) => x.textContent === "Městská část")?.nextElementSibling; if (dd) dd.textContent = mc || "–"; });
+  if ($("ochutnavka")) ochutnavka(adresa.so, $("ochutnavka"), { start: puvod.start, obrys: b.obrys });
   if ($("objednat")) window.objednavkaFormular($("objednat"), { adresa: adresa.adresa, typ, inz });
   document.querySelectorAll("#vysledek [data-zajem]").forEach((k) => window.zajemFormular?.(k));
   $("vysledek").querySelectorAll("button[data-alt]").forEach((btn) => btn.addEventListener("click", () =>
@@ -495,6 +497,7 @@ async function overit(e) {
     try { url = new URL(text); } catch { /* adresa */ }
     if (url) return await overitOdkaz(url);
 
+    const start = performance.now();   // limit ochutnávky 5 s se počítá od kliknutí
     nacitam("Hledám v registru adres…");
     const adresy = await geokodujChytre(text);
     const kand = adresy.length ? adresy : await geokoduj(text, 10);
@@ -503,7 +506,7 @@ async function overit(e) {
         `<p>V registru adres RÚIAN jsme nic nenašli. Zkontrolujte ulici a číslo, případně přidejte část obce.</p>`);
     } else if (adresy.length === 1) {
       const [a] = await adresyUBodu(adresy[0].location.y, adresy[0].location.x, 1);
-      await zobrazBudovu(a, null, { jak: "adresa zadaná uživatelem", jistota: "jistá" });
+      await zobrazBudovu(a, null, { jak: "adresa zadaná uživatelem", jistota: "jistá", start });
     } else {
       const seznam = (await Promise.all(adresy.slice(0, 8).map(async (c) => (await adresyUBodu(c.location.y, c.location.x, 1))[0]))).filter(Boolean);
       seznam.forEach((a) => { a.vzdalenost = null; });

@@ -19,7 +19,7 @@
 .zahlavi .podnadpis { color: var(--tlumene-t); max-width: 52ch; margin-bottom: 28px; font-size: 1.0625rem; }
 .zahlavi .stitek { color: var(--slabe-t); }
 .zahlavi .zadani label { color: var(--text-t); }
-.zahlavi .napoveda { color: var(--slabe-t); max-width: 60ch; }
+.zahlavi .napoveda { color: var(--slabe-t); max-width: none; text-wrap: pretty; }
 .zahlavi .pole .tl:disabled { opacity: .6; cursor: progress; }
 
 #vysledek { margin-top: 36px; }
@@ -86,7 +86,7 @@ ul.kandidati button .tlumene { color: var(--slabe-t); }
 .och-snimek { position: relative; margin: 0 0 16px; }
 .och-snimek img, .och-snimek svg { display: block; width: 100%; height: auto; }
 .och-snimek svg { position: absolute; inset: 0; }
-.och-snimek polygon { stroke: #fff; filter: drop-shadow(0 0 2px rgba(0,0,0,.6)); }
+
 .och-snimek figcaption { font-size: .8rem; color: var(--slabe-t); margin-top: 6px; }
 .och-tabulka { width: 100%; border-collapse: collapse; font-size: .95rem; }
 .och-tabulka th, .och-tabulka td { text-align: left; vertical-align: top; padding: 12px 8px 12px 0; border-top: 1px solid var(--linka-t); }
@@ -94,6 +94,12 @@ ul.kandidati button .tlumene { color: var(--slabe-t); }
 .och-tabulka td:nth-child(2) { padding-right: 14px; }
 .och-znacka { display: inline-block; font-size: .625rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; padding: 4px 8px; color: #fff; white-space: nowrap; }
 .och-znacka.zelena { background: var(--zelena); } .och-znacka.oranzova { background: var(--oranzova); } .och-znacka.cervena { background: var(--cervena); } .och-znacka.seda { background: var(--seda); }
+.och-znacka.ceka { background: transparent; color: var(--tlumene-t); border: 1px solid rgba(255,255,255,.25); }
+.och-nacitani { display: block; height: .9em; width: 70%; margin-top: 4px; background: linear-gradient(90deg, rgba(255,255,255,.06), rgba(255,255,255,.16), rgba(255,255,255,.06)); background-size: 200% 100%; }
+@media (prefers-reduced-motion: no-preference) { .och-nacitani { animation: och-tok 1.2s linear infinite; } }
+@keyframes och-tok { to { background-position: -200% 0; } }
+.och-tabulka tr:not(.och-ceka) td { animation: och-objev .25s ease-out; }
+@keyframes och-objev { from { opacity: 0; } }
 .och-znacka.zam { background: transparent; color: var(--tlumene-t); border: 1px solid rgba(255,255,255,.35); }
 .och-zamceno th, .och-zamceno td { color: var(--slabe-t); }
 .och-zamceno th::before { content: ""; display: inline-block; width: 11px; height: 13px; margin-right: 8px; vertical-align: -1px; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 14'%3E%3Cpath d='M3 6V4a3 3 0 0 1 6 0v2' fill='none' stroke='white' stroke-width='1.6'/%3E%3Crect x='1' y='6' width='10' height='7.5' rx='1' fill='white'/%3E%3C/svg%3E") no-repeat center / contain; opacity: .7; }
@@ -144,6 +150,7 @@ ul.kandidati button .tlumene { color: var(--slabe-t); }
 .obj-email { margin: 14px 0 12px; }
 .obj-souhlas { display: flex !important; gap: 10px; align-items: flex-start; font-weight: 500 !important; line-height: 1.5; margin: 0 0 14px; }
 .obj-souhlas input { margin-top: 4px; width: 18px; height: 18px; flex: none; accent-color: var(--navy); }
+.obj-jistota { margin: -6px 0 14px 28px !important; font-size: .88rem; font-weight: 600; color: var(--navy) !important; }
 .obj-zkusebni { background: #fff3e0; border: 1px solid #f0b060; padding: 10px 14px; font-size: .9rem; color: var(--navy) !important; }
 .obj-zaplatit { width: 100%; margin-top: 12px; }
 .obj-stav-zprava:empty { display: none; }
