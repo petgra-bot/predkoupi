@@ -116,3 +116,47 @@ ul.kandidati button .tlumene { color: var(--slabe-t); }
 .tl.obrys-tmave { color: var(--navy); border: 1px solid var(--navy); background: transparent; }
 @media (hover: hover) and (pointer: fine) { .tl.obrys-tmave:hover { background: var(--svetla); } .co-dal .tl.tmave-tl:hover { background: var(--navy-3); } }
 .co-dal-zajem { margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--linka); }
+
+/* Objednávka (13. 11. 2026): formulář v bílém boxu „Co dál“, stránka průběhu a výsledku */
+.co-dal { color-scheme: light; }
+.objednat .obj-adresa { margin: 0 0 14px; color: var(--tlumene); font-size: .92rem; }
+.obj-balicky { border: 0; padding: 0; margin: 0 0 14px; display: grid; gap: 10px; }
+.obj-balicek { display: flex; gap: 12px; align-items: flex-start; border: 1px solid var(--linka); padding: 14px 16px; cursor: pointer; }
+.obj-balicek:has(input:checked) { border-color: var(--navy); box-shadow: inset 0 0 0 1px var(--navy); }
+.obj-balicek input { margin-top: 4px; accent-color: var(--navy); }
+.obj-balicek b { display: block; margin-bottom: 4px; text-transform: uppercase; letter-spacing: .02em; font-size: .92rem; }
+.obj-balicek span { color: var(--tlumene); font-size: .92rem; line-height: 1.5; }
+.obj-balicek b { color: var(--navy); }
+.objednat label { display: block; font-weight: 600; font-size: .88rem; color: var(--navy); }
+.objednat input[type=text], .objednat input[type=email], .objednat input[type=number] {
+  display: block; width: 100%; margin-top: 6px; min-height: 48px; padding: 0 14px; border: 1px solid #b8bdcc; border-radius: 0;
+  font: 400 1rem "Montserrat", sans-serif; color: var(--navy); background: #fff; }
+.objednat input:focus-visible { outline: 2px solid var(--navy); outline-offset: 1px; }
+.obj-radek { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin: 0 0 10px; }
+.obj-napoveda { font-size: .85rem; color: var(--tlumene); margin: 4px 0 12px !important; }
+.obj-stav { border: 0; padding: 0; margin: 0 0 14px; display: flex; flex-wrap: wrap; gap: 8px; }
+.obj-stav legend { font-weight: 600; font-size: .88rem; margin-bottom: 6px; }
+.obj-stav label { font-weight: 500; }
+.obj-stav input { position: absolute; opacity: 0; }
+.obj-stav span { display: inline-flex; align-items: center; min-height: 40px; padding: 0 14px; border: 1px solid #b8bdcc; cursor: pointer; }
+.obj-stav input:checked + span { background: var(--navy); color: #fff; border-color: var(--navy); }
+.obj-stav input:focus-visible + span { outline: 2px solid var(--navy); outline-offset: 2px; }
+.obj-email { margin: 14px 0 12px; }
+.obj-souhlas { display: flex !important; gap: 10px; align-items: flex-start; font-weight: 500 !important; line-height: 1.5; margin: 0 0 14px; }
+.obj-souhlas input { margin-top: 4px; width: 18px; height: 18px; flex: none; accent-color: var(--navy); }
+.obj-zkusebni { background: #fff3e0; border: 1px solid #f0b060; padding: 10px 14px; font-size: .9rem; color: var(--navy) !important; }
+.obj-zaplatit { width: 100%; margin-top: 12px; }
+.obj-stav-zprava:empty { display: none; }
+.obj-stav-zprava[data-typ=chyba] { color: #b3261e !important; font-weight: 600; }
+.obj-drobne { font-size: .78rem; margin-top: 12px !important; }
+.obj-kroky { list-style: none; padding: 0; margin: 4px 0 12px; display: grid; gap: 8px; }
+.obj-kroky li { display: flex; gap: 10px; align-items: center; color: var(--tlumene-t); }
+.obj-kroky li::before { content: ""; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,.4); border-radius: 50%; flex: none; }
+.obj-kroky li.hotovo { color: var(--text-t); }
+.obj-kroky li.hotovo::before { background: var(--zelena-t); border-color: var(--zelena-t); }
+@media (prefers-reduced-motion: no-preference) {
+  .obj-kroky li:not(.hotovo):first-of-type::before, .obj-kroky li.hotovo + li:not(.hotovo)::before { animation: obj-pulz 1.2s ease-in-out infinite; }
+}
+@keyframes obj-pulz { 50% { border-color: var(--text-t); } }
+.obj-pdf { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+.obj-report { width: 100%; height: 80vh; min-height: 600px; border: 1px solid var(--linka-t); background: #fff; margin-top: 4px; }
