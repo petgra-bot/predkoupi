@@ -14,7 +14,8 @@ const OCH = {
   ORTOFOTO: "https://ags.cuzk.gov.cz/arcgis1/rest/services/ORTOFOTO/MapServer",
 };
 const OCH_STAV = { zelena: "V pořádku", oranzova: "Pozor", cervena: "Riziko", seda: "Nezjištěno" };
-const OCH_RADON = { 1: "zelena", 2: "zelena", 3: "oranzova" };
+// Radon: oranžově tam, kde doporučujeme měření (index 3, u rodinného domu i 2) – zelená s úkolem „změřte“ mátla (hodnocení 13. 11.).
+const ochRadonBarva = (idx, rodinny) => idx === 3 || (rodinny && idx === 2) ? "oranzova" : idx === 1 || idx === 2 ? "zelena" : "seda";
 const OCH_AREALY = {
   ...Object.fromEntries(Array.from({ length: 9 }, (_, i) => [String(102 + i), [100, "průmyslový areál"]])),
   "111": [300, "chov hospodářských zvířat (zápach)"], "303": [200, "stadion (hluk při akcích)"],
@@ -119,7 +120,7 @@ function ochBarvaHluku(lden, ln) {
 const ochOk = (x) => x.status === "fulfilled";
 
 // Každá oblast je samostatný slib: na webu se ukáže, jakmile je hotová (průběžné zobrazení, 13. 11. 2026).
-function ochutnavkaOblasti(dum) {
+function ochutnavkaOblasti(dum, rodinny = true) {
   const maxPasmo = async (vrstva, pole) => {
     const h = (await ochPrvky(vrstva, dum, { pole })).map((f) => parseFloat(f.attributes[pole])).filter((x) => !isNaN(x));
     return h.length ? Math.max(...h) : null;
@@ -144,7 +145,9 @@ function ochutnavkaOblasti(dum) {
       inSR: 5514, spatialRel: "esriSpatialRelIntersects" })).features || [];
     if (!f.length) return radek("Radon", "seda", "Mapa radonu pro tento bod nemá údaj.");
     const a = f[0].attributes, idx = a.radon_idx;
-    return radek("Radon", OCH_RADON[idx] || "seda", `Radonový index podloží ${a.radon_popis || idx} (${idx} ze 3); o domě rozhodne měření.`);
+    const b = ochRadonBarva(idx, rodinny);
+    return radek("Radon", b, `Radonový index podloží ${a.radon_popis || idx} (${idx} ze 3)` +
+      (b === "oranzova" ? "; doporučujeme radon v domě změřit." : "; o domě rozhodne měření."));
   })();
   const plan = (async () => {
     const url = `${OCH.MPP}/MPP_CUR_MPP_300_LOKALITY_P/FeatureServer/0`;
@@ -156,7 +159,7 @@ function ochutnavkaOblasti(dum) {
     const a = f[0].attributes;
     const l = { nazev: a.nazev, stabilita: dom.stabilita?.[a.stabilita] ?? a.stabilita, vyuziti: dom.vyuziti_lok?.[a.vyuziti_lok] ?? a.vyuziti_lok };
     let text = [`Lokalita ${l.nazev || ""}`.trim(), [l.stabilita, l.vyuziti].filter(Boolean).join(", ")].filter(Boolean).join(": ");
-    if (kor !== null) text += `; dopravní koridor ${kor.toFixed(1).replace(".", ",")} m od domu`;
+    if (kor !== null) text += kor < 1 ? "; dopravní koridor zasahuje až k domu" : `; dopravní koridor ${Math.round(kor)} m od domu`;
     return radek("Územní plán", String(l.stabilita).startsWith("stabilizovan") && kor === null ? "zelena" : "oranzova", text + ".");
   })();
   const okoli = (async () => {
@@ -178,9 +181,9 @@ function ochutnavkaOblasti(dum) {
 const OCH_ZAMCENE = `
   <tr class="och-zamceno"><th scope="row">Právní stav</th><td><span class="och-znacka zam">V Prověrce</span></td><td>Věcná břemena, zástavy, exekuce a plomby z výpisu z katastru, insolvence majitele.</td></tr>
   <tr class="och-zamceno"><th scope="row">Co udělat</th><td><span class="och-znacka zam">V Prověrce</span></td><td>Verdikt jednou větou a úkoly na míru před rezervací, podpisem a převodem.</td></tr>
-  <tr class="och-zamceno och-cena"><th scope="row">Cena</th><td><span class="och-znacka zam">V Prověrce PLUS</span></td><td>Odhad ceny ze skutečných prodejů v katastru (u bytu z prodejů v tomtéž domě, u domu z podobných domů v okolí) a srovnání s cenou v inzerátu: víte, jestli nepřeplácíte, a máte argumenty k vyjednávání.</td></tr>`;
+  <tr class="och-zamceno och-cena"><th scope="row">Cena</th><td><span class="och-znacka zam">V Prověrce PLUS</span></td><td>Odhad ze skutečných prodejů v katastru proti ceně v inzerátu – víte, jestli nepřeplácíte.</td></tr>`;
 
-async function ochutnavka(soKod, cil, { start = performance.now(), obrys: znamy } = {}) {
+async function ochutnavka(soKod, cil, { start = performance.now(), obrys: znamy, rodinny = true } = {}) {
   OCH_KONEC = start + 5000;
   cil.innerHTML = `<p class="tlumene">Prověřujeme povodně, hluk, radon, územní plán a okolí…</p>`;
   try {
@@ -194,7 +197,7 @@ async function ochutnavka(soKod, cil, { start = performance.now(), obrys: znamy 
     const obrys = `<defs><pattern id="och-sraf" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
         <rect width="8" height="8" fill="rgba(40,220,255,.25)"/><line x1="0" y1="0" x2="0" y2="8" stroke="#28dcff" stroke-width="3"/></pattern></defs>` +
       body.map((b) => `<polygon points="${b}" fill="url(#och-sraf)" stroke="#0a1e3c" stroke-width="6"/><polygon points="${b}" fill="none" stroke="#28dcff" stroke-width="3"/>`).join("");
-    const oblasti = ochutnavkaOblasti(dum);
+    const oblasti = ochutnavkaOblasti(dum, rodinny);
     cil.innerHTML = `<details class="sbal ochutnavka" open>
       <summary><span class="hlavicka-sbal"><h2>Přehled zdarma</h2><span class="shrnuti">prověřujeme…</span></span><span class="prepinac" aria-hidden="true"></span></summary>
       <figure class="och-snimek"><img src="${obr}" alt="Letecký snímek okolí domu" width="700" height="500">
@@ -221,7 +224,7 @@ async function ochutnavka(soKod, cil, { start = performance.now(), obrys: znamy 
     Object.keys(oblasti).forEach((n) => vypln(nestihlo(n)));   // co nestihlo do 5 s
     const vsechny = Object.values(hotove);
     const pocty = ["cervena", "oranzova", "zelena", "seda"].map((k) => [k, vsechny.filter((x) => x.barva === k).length]).filter(([, n]) => n);
-    cil.querySelector(".shrnuti").textContent = pocty.map(([k, n]) => `${n}× ${OCH_STAV[k].toLowerCase()}`).join(" · ");
+    cil.querySelector(".shrnuti").textContent = pocty.map(([k, n]) => `${n}×\u00a0${OCH_STAV[k].toLowerCase().replace(" ", "\u00a0")}`).join(" · ");
     cil.dispatchEvent(new CustomEvent("ochutnavka-hotovo", { detail: { oblasti: vsechny, ms: Math.round(performance.now() - start) }, bubbles: true }));
   } catch (e) {
     cil.innerHTML = `<p class="poznamka">Přehled se teď nepodařilo načíst (${esc(e.message)}). Zkuste to prosím za chvíli znovu.</p>`;

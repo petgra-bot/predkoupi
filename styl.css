@@ -20,7 +20,9 @@ p { margin: 0; text-wrap: pretty; }
 .preskocit { position: absolute; left: 16px; top: 12px; transform: translateY(-200%); z-index: 10; background: var(--bila); color: var(--navy);
   padding: 10px 14px; font-weight: 600; text-decoration: none; }
 .preskocit:focus { transform: none; }
-.skryte { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.skryte { position: absolute; left: 0; width: 1px; height: 1px; margin: -1px; padding: 0; border: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+/* Nic nesmí stránku rozšířit do strany (mobil, hodnocení 13. 11. 2026) */
+html, body { overflow-x: clip; }
 
 /* Typografie */
 h1, h2, h3 { margin: 0; text-transform: uppercase; font-weight: 800; letter-spacing: -.01em; line-height: 1.04; text-wrap: balance; }

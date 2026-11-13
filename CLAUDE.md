@@ -22,7 +22,7 @@ Styl přebíráme, texty, logo a obsah konkurence ne. Žádné vymyšlené recen
 - Testovací web https://proverka.gratzer.cz (repozitář petgra-bot/proverka) je **co nejvíc stejný jako produkce** https://predkoupi.cz (petgra-bot/predkoupi). Kopíruje se skriptem `python3 test/na-test.py ../proverka` v repozitáři predkoupi.
 - **Do spuštění placených výpisů na produkci:** každou změnu webu dělat **na produkci i na testu zároveň**.
 - **Od spuštění placených variant:** změny **nejdřív na testu**, na produkci **až po úspěšném otestování** – pokud Petr neřekne jinak. Platí i pro server (`nastroje/`, agenti): nejdřív testovací běh, pak ostrý provoz.
-- Záměrné rozdíly testu (jen tyto): CNAME, README a CLAUDE.md repozitáře; test se neindexuje (robots.txt „Disallow: /“, meta noindex, bez sitemap); bez ověření Seznamu a bez Cloudflare Analytics (nemíchat statistiky); oranžový pruh „Testovací kopie“; zájemci z testu se ukládají se zdrojem „test:…“ (pozná to sám `zajem.js`). Navíc jen na testu: archivní složky `ukazka/`, `archiv/`, `navrh/`.
+- Záměrné rozdíly testu (jen tyto): CNAME, README a CLAUDE.md repozitáře; test se neindexuje (robots.txt „Disallow: /“, meta noindex, bez sitemap); bez ověření Seznamu a bez Cloudflare Analytics (nemíchat statistiky); oranžový pruh „Testovací kopie“; zájemci z testu se ukládají se zdrojem „test:…“ (pozná to sám `zajem.js`). Navíc jen na testu: archivní složky `ukazka/`, `archiv/`, `navrh/` a předváděcí průchod `predvedeni/` (zrychlená objednávka se vzorovým reportem bez placení, zapíná ho `?predvedeni=1` jen na testu; Petr 13. 11. 2026).
 
 ## Skills v repozitáři (vybral Petr, 7. 11. 2026)
 

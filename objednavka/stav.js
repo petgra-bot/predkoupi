@@ -6,6 +6,8 @@
   const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   const token = new URLSearchParams(location.search).get("t") || "";
   const tiche = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const kratkaAdresa = (a) => String(a || "").split(",").map((x) => x.trim()).filter((x) => x && !/^\d{3}\s?\d{2}\b/.test(x)).slice(0, 2).join(", ");
+  const email = (() => { try { return sessionStorage.getItem("predkoupi-email") || ""; } catch { return ""; } })();
   let casovac = null, posledniStav = "", vykreslenProbeh = false, ticker = null;
 
   // Co se v kterém kroku skutečně děje (zprávy se střídají, hotový krok se odškrtne).
@@ -16,7 +18,7 @@
      "Procházíme Metropolitní plán, koridory a uzávěry", "Hledáme dům v dokumentaci EIA", "Mapujeme vedení vysokého napětí a areály v okolí"],
     ["Hledáme věcná břemena, zástavy, exekuce a plomby", "Ověřujeme vlastníky v insolvenčním rejstříku", "Vyhodnocujeme stavby a záměry v okolí"],
     ["Skládáme verdikt a přehled šesti oblastí", "Píšeme úkoly na míru před rezervací, podpisem a převodem", "Vytváříme PDF"],
-    ["Kontrolujeme čísla proti zdrojům", "Nezávislý hodnotitel čte report očima kupujícího"],
+    ["Kontrolujeme čísla proti zdrojům", "Druhá kontrola čte report očima kupujícího"],
   ];
   const ZPRAVY_PLUS = "Porovnáváme cenu se skutečnými prodeji v katastru";
   const VAHY = [2, 15, 20, 25, 25, 13];   // přibližný podíl kroků na celkovém čase
@@ -33,16 +35,17 @@
       $("objednavka").innerHTML = `
         <div class="pr">
           <figure class="pr-snimek${snimek ? "" : " pr-bez"}">${snimek}<span class="pr-sken" aria-hidden="true"></span>
-            <figcaption>Prověřujeme <b>${esc(o.adresa.split(",").slice(0, 2).join(","))}</b></figcaption></figure>
+            <figcaption>Prověřujeme <b>${esc(kratkaAdresa(o.adresa))}</b></figcaption></figure>
           <div class="pr-hlavni">
             <div class="pr-ukazatel" role="progressbar" aria-label="Průběh prověrky" aria-valuemin="0" aria-valuemax="100">
               <span class="pr-procenta">0 %</span><span class="pr-cas"></span><div class="pr-pruh"><i></i></div></div>
             <ol class="pr-kroky">${o.faze.map((f, i) => `<li data-i="${i}"><span class="pr-ikona" aria-hidden="true"></span>
               <div><b>${esc(f.nazev)}</b><ul class="pr-zpravy">${zpravy[i].map((z) => `<li>${esc(z)}</li>`).join("")}</ul></div></li>`).join("")}</ol>
-            <p class="pr-odejit">Stránku můžete zavřít – report pošleme e-mailem a uvidíte ho i tady. Zpravidla do ${o.dodani_min} minut.</p>
+            <p class="pr-odejit">Stránku můžete zavřít – report pošleme ${email ? `na <b>${esc(email)}</b>` : "e-mailem"} a uvidíte ho i tady. Zpravidla do ${o.dodani_min} minut.
+              ${email ? `<span class="pr-preklep">Překlep v e-mailu? Napište nám na <a href="mailto:info@predkoupi.cz?subject=${encodeURIComponent("Oprava e-mailu, objednávka " + o.cislo)}">info@predkoupi.cz</a>.</span>` : ""}</p>
           </div>
           ${ochutnavka?.oblasti?.length ? `<div class="pr-vime"><h3>Co už víme z přehledu zdarma</h3><ul>${ochutnavka.oblasti.map((x) =>
-            `<li><span class="pr-tecka ${esc(x.barva)}"></span><b>${esc(x.oblast)}</b> ${esc(x.text)}</li>`).join("")}</ul>
+            `<li><b>${esc(x.oblast)}</b><span class="pr-stav ${esc(x.barva)}">${esc(BARVY[x.barva] || "")}</span><span>${esc(x.text)}</span></li>`).join("")}</ul>
             <p>V reportu k tomu přidáme právní stav z katastru, verdikt a úkoly na míru.</p></div>` : ""}
         </div>`;
       clearInterval(ticker);
@@ -69,8 +72,10 @@
     u.setAttribute("aria-valuenow", pct);
     u.querySelector(".pr-procenta").textContent = `${pct} %`;
     u.querySelector(".pr-pruh i").style.width = `${pct}%`;
-    const zbyva = Math.max(1, Math.ceil((celkem - o.bezi_s) / 60));
-    u.querySelector(".pr-cas").textContent = o.bezi_s < celkem ? `zbývá asi ${zbyva} min` : "už jen chvilku";
+    // Zbývající čas z procent (ne z hodin), ať čísla nikdy neodporují; po překročení odhadu poctivě „trvá to déle“.
+    const zbyva = Math.max(1, Math.ceil((celkem * (1 - pct / 100)) / 60));
+    u.querySelector(".pr-cas").textContent = o.bezi_s > celkem * 1.15 ? "trvá to déle než obvykle – report přijde e-mailem"
+      : pct >= 90 ? "už jen chvilku" : `zbývá asi ${zbyva} min`;
   }
 
   function posunZpravu() {
@@ -90,7 +95,19 @@
 
   async function vysledek(o) {
     clearInterval(ticker);
+    // Krátká chvíle „Hotovo“ na konci průběhu (hodnocení 13. 11.): 100 %, odškrtnuté kroky, pak report.
+    const pr = $("objednavka").querySelector(".pr");
+    if (pr) {
+      pr.querySelectorAll(".pr-kroky > li").forEach((li) => { li.classList.add("hotovo"); li.classList.remove("aktivni"); });
+      const u = pr.querySelector(".pr-ukazatel");
+      u.setAttribute("aria-valuenow", 100);
+      u.querySelector(".pr-procenta").textContent = "100 %";
+      u.querySelector(".pr-pruh i").style.width = "100%";
+      u.querySelector(".pr-cas").textContent = "Hotovo – report je připravený";
+      await new Promise((r) => setTimeout(r, 1400));
+    }
     document.body.classList.add("bily-report");
+    scrollTo(0, 0);
     $("objednavka").innerHTML = `<p class="rp-nacitam">Načítáme report…</p>`;
     let k;
     try {
@@ -113,15 +130,16 @@
         </header>
         ${k.letecky ? `<figure class="rp-snimek"><img src="${N.api}${k.letecky}" alt="Letecký snímek domu" loading="lazy">
           <figcaption>Letecký snímek ČÚZK; oranžově pozemky, tyrkysově dům.</figcaption></figure>` : ""}
-        <section class="rp-verdikt ${esc(k.verdikt?.barva)}"><p class="rp-stitek-nad">Verdikt</p>
+        <div class="rp-verdikt ${esc(k.verdikt?.barva)}"><p class="rp-stitek-nad">Verdikt</p>
           <p class="rp-verdikt-text">${esc(k.verdikt?.text)}</p>
           ${(k.verdikt?.stitky || []).length ? `<p class="rp-stitky">${k.verdikt.stitky.map((s) => `<span class="${esc(s.barva)}">${esc(s.text)}</span>`).join("")}</p>` : ""}
-        </section>
-        ${k.cena ? `<section class="rp-cena ${esc(k.cena.barva)}"><h2>Cena proti trhu</h2>
+        </div>
+        ${k.cena ? `<div class="rp-cena ${esc(k.cena.barva)}"><h2>Cena proti trhu</h2>
           <dl><div><dt>${esc(k.cena.popisek || "Požadovaná cena")}</dt><dd>${esc(k.cena.pozadovana)}</dd></div>
           <div><dt>Trh v okolí</dt><dd>${esc(k.cena.trh)}</dd></div><div><dt>Rozdíl</dt><dd>${esc(k.cena.odchylka)}</dd></div></dl>
-          <p>${esc(k.cena.text)}</p></section>`
-          : `<section class="rp-plus"><p><b>Nepřeplácíte?</b> Odhad ceny ze skutečných prodejů v katastru je součástí Prověrky PLUS – doplatek 500 Kč, rizika už máme.</p></section>`}
+          <p>${esc(k.cena.text)}</p></div>`
+          : `<div class="rp-plus"><p><b>Nepřeplácíte?</b> Odhad ceny ze skutečných prodejů v katastru je v Prověrce PLUS. Rizika už máme, doplníme jen cenu za 500 Kč –
+            <a href="mailto:info@predkoupi.cz?subject=${encodeURIComponent("Doplnit odhad ceny, objednávka " + o.cislo)}">napište nám</a>.</p></div>`}
         <section><h2>Přehled</h2><ul class="rp-prehled">${(k.semafor || []).map((s) => `<li class="${esc(s.barva)}">
           <span class="rp-oblast">${esc(s.oblast)}</span>${stitek(s.barva)}<span class="rp-text">${esc(s.text)}</span></li>`).join("")}</ul></section>
         ${(k.hlavni_zjisteni || []).length ? `<section><h2>Hlavní zjištění</h2>${k.hlavni_zjisteni.map((z) => `
@@ -135,22 +153,28 @@
           `<li class="${esc(z.barva)}"><b>${esc(z.titulek)}</b> ${esc(z.text)}</li>`).join("")}</ul></section>` : ""}
         ${(k.nezjisteno || []).length ? `<details class="rp-sbal"><summary>Co jsme nezjistili (${k.nezjisteno.length})</summary><ul>${k.nezjisteno.map((x) => `<li>${esc(x)}</li>`).join("")}</ul></details>` : ""}
         ${(k.zdroje || []).length ? `<details class="rp-sbal"><summary>Z čeho vycházíme</summary><ul>${k.zdroje.map((x) => `<li>${esc(x)}</li>`).join("")}</ul></details>` : ""}
+        <section class="rp-stahnout"><h2>Report v PDF</h2><div class="rp-lista">${pdfOdkazy(o)}</div>
+          <p class="rp-nap">Stejný report jsme poslali i e-mailem.</p></section>
         <p class="rp-upozorneni">${esc(k.upozorneni || "Report není právní ani znalecký posudek.")}</p>
-      </article>
-      <div class="rp-lista">${pdfOdkazy(o)}</div>`;
+        ${N.predvedeni ? `<p class="rp-predvedeni">Toto byla ukázka. <a href="/predvedeni/">Spustit znovu</a></p>` : ""}
+      </article>`;
+    $("objednavka").querySelector(".rp")?.classList.add("rp-objev");
     $("objednavka").querySelectorAll("input[data-u]").forEach((c) => c.addEventListener("change", () => {
       ulozene[c.dataset.u] = c.checked;
       try { localStorage.setItem(`predkoupi-ukoly-${token}`, JSON.stringify(ulozene)); } catch { /* bez úložiště */ }
     }));
   }
 
+  // Názvy souborů podle adresy (Predkoupi-Karlicka-910-49.pdf), popisky tak, aby bylo jasné, čím se PDF liší.
+  const slug = (a) => kratkaAdresa(a).split(",")[0].normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Za-z0-9]+/g, "-").replace(/^-|-$/g, "");
   const pdfOdkazy = (o) => (o.report?.pdf || []).map((u, i, a) =>
-    `<a class="tl tmave-tl" href="${N.api}${u}" download>${a.length > 1 ? (i ? "Podrobný report (PDF)" : "Základní report (PDF)") : "Stáhnout PDF"}</a>`).join("");
+    `<a class="tl ${i ? "obrys-tmave" : "tmave-tl"}" href="${N.api}${u}" download="Predkoupi-${slug(o.adresa)}${i ? "-podrobny" : ""}.pdf">${
+      a.length > 1 ? (i ? "Podrobný report – mapy a tabulky" : "Report (PDF)") : "Stáhnout report (PDF)"}</a>`).join("");
 
   // ---------- ostatní stavy ----------
   function vykresli(o) {
     $("nadpis").textContent = o.stav === "hotovo" ? "Report je hotový" : `${o.balicek} č. ${o.cislo}`;
-    $("podnadpis").textContent = o.adresa;
+    $("podnadpis").textContent = kratkaAdresa(o.adresa);
     if (o.stav === "zaplaceno" || o.stav === "bezi") return probeh(o);
     vykreslenProbeh = false; clearInterval(ticker);
     if (o.stav === "hotovo") return vysledek(o);
@@ -189,7 +213,7 @@
       casovac = setTimeout(nacti, 6000);
     }
   }
-  const vykresliHlavicku = (o) => { $("nadpis").textContent = `${o.balicek} č. ${o.cislo}`; $("podnadpis").textContent = o.adresa; };
+  const vykresliHlavicku = (o) => { $("nadpis").textContent = `${o.balicek} č. ${o.cislo}`; $("podnadpis").textContent = kratkaAdresa(o.adresa); };
 
   if (!token) { $("nadpis").textContent = "Objednávka nenalezena"; } else nacti();
 })();

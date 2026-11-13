@@ -11,7 +11,7 @@ Rozdíly, které záměrně zůstávají (jen tyto):
 - bez ověření Seznam Webmaster a bez Cloudflare Web Analytics (nemíchat návštěvy testu do statistik produkce),
 - úzký pruh „Testovací kopie“ nahoře, aby si test nikdo nespletl s ostrou službou,
 - zajem.js sám pozná test podle adresy a e-maily ukládá se zdrojem „test:…“ (soubor je na obou webech stejný).
-Složky, které má jen test (ukazka/, archiv/, navrh/, .claude/), zůstávají beze změny.
+Složky, které má jen test (ukazka/, archiv/, navrh/, predvedeni/, .claude/), zůstávají beze změny.
 """
 import re
 import shutil

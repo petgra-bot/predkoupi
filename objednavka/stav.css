@@ -50,8 +50,14 @@
 .pr-vime { background: var(--karta-t); border: 1px solid var(--linka-t); padding: 18px 22px; }
 .pr-vime h3 { margin: 0 0 10px; font-size: .8rem; letter-spacing: .1em; text-transform: uppercase; color: var(--slabe-t); }
 .pr-vime ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
-.pr-vime li { font-size: .92rem; color: var(--tlumene-t); }
-.pr-vime li b { color: var(--text-t); margin-right: 4px; }
+.pr-vime li { font-size: .92rem; color: var(--tlumene-t); display: grid; grid-template-columns: 110px auto 1fr; gap: 4px 10px; align-items: baseline; }
+.pr-vime li b { color: var(--text-t); }
+@media (max-width: 560px) { .pr-vime li { grid-template-columns: 1fr auto; } .pr-vime li > span:last-child { grid-column: 1 / -1; } }
+/* Stav slovem, ne jen barvou (WCAG 1.4.1, hodnocení 13. 11.) */
+.pr-stav { --c: var(--seda); font-size: .66rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 2px 7px; border: 1px solid var(--c); color: var(--c); white-space: nowrap; }
+.pr-stav.zelena { --c: var(--zelena-t); } .pr-stav.oranzova { --c: var(--oranzova-t); } .pr-stav.cervena { --c: var(--cervena-t); } .pr-stav.seda { --c: var(--slabe-t); }
+.pr-preklep { display: block; margin-top: 6px; font-size: .85rem; color: var(--slabe-t); }
+.pr-preklep a, .pr-odejit b { color: var(--text-t); }
 .pr-vime p { margin: 12px 0 0; font-size: .85rem; color: var(--slabe-t); }
 .pr-tecka { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 8px; background: var(--seda); }
 .pr-tecka.zelena { background: var(--zelena-t); } .pr-tecka.oranzova { background: var(--oranzova-t); } .pr-tecka.cervena { background: var(--cervena-t); }
@@ -61,7 +67,7 @@ body.bily-report { background: #fff; color: var(--navy); color-scheme: light; }
 body.bily-report .zahlavi { display: none; }
 body.bily-report .paticka-zdroje { color: var(--tlumene); }
 .rp-nacitam { color: var(--tlumene); }
-.rp { max-width: 760px; margin: 0 auto; padding-bottom: 90px; }
+.rp { max-width: 760px; margin: 0 auto; padding-bottom: 24px; }
 .rp h1 { font-size: clamp(1.5rem, 5vw, 2.2rem); line-height: 1.15; text-transform: uppercase; font-weight: 800; margin: 6px 0 8px; color: var(--navy); }
 .rp h2 { font-size: .85rem; letter-spacing: .12em; text-transform: uppercase; font-weight: 800; margin: 34px 0 12px; color: var(--navy); }
 .rp-stitek-nad { margin: 0; font-size: .72rem; letter-spacing: .14em; text-transform: uppercase; font-weight: 700; color: var(--tlumene); }
@@ -118,11 +124,22 @@ body.bily-report .paticka-zdroje { color: var(--tlumene); }
 .rp-dalsi b { color: var(--navy); display: block; }
 
 .rp-sbal { margin-top: 18px; border-top: 1px solid var(--linka); padding-top: 12px; }
-.rp-sbal summary { cursor: pointer; font-weight: 700; min-height: 44px; display: flex; align-items: center; }
+.rp-sbal summary { cursor: pointer; font-weight: 700; min-height: 44px; display: flex; align-items: center; gap: 10px; list-style: none; }
+.rp-sbal summary::-webkit-details-marker { display: none; }
+/* Šipka a „Zobrazit“, ať je jasné, že blok jde otevřít (hodnocení 13. 11.) */
+.rp-sbal summary::after { content: "Zobrazit"; margin-left: auto; font-size: .8rem; font-weight: 600; color: var(--tlumene); text-decoration: underline; text-underline-offset: 3px; }
+.rp-sbal summary::before { content: ""; width: 7px; height: 7px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(-45deg); transition: transform .2s var(--krivka); flex: none; }
+.rp-sbal[open] summary::before { transform: rotate(45deg); }
+.rp-sbal[open] summary::after { content: "Skrýt"; }
 .rp-sbal ul { color: var(--tlumene); padding-left: 20px; }
 .rp-upozorneni { margin-top: 28px; font-size: .85rem; color: var(--tlumene); }
 
-.rp-lista { position: fixed; left: 0; right: 0; bottom: 0; display: flex; gap: 10px; justify-content: center; padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
-  background: rgba(255,255,255,.96); border-top: 1px solid var(--linka); backdrop-filter: blur(6px); z-index: 5; }
-.rp-lista .tl { flex: 1; max-width: 320px; }
+/* PDF na konci reportu, ne připnuté přes obrazovku (hodnocení 13. 11.) */
+.rp-lista { display: flex; flex-wrap: wrap; gap: 10px; }
+.rp-stahnout .rp-nap { margin: 10px 0 0; }
+.rp-lista .tl { flex: 1 1 220px; text-align: center; }
+.rp-predvedeni { margin-top: 18px; padding: 12px 16px; background: #fff3e0; border: 1px solid #f0b060; }
+.rp-predvedeni a { color: var(--navy); font-weight: 700; }
+@media (prefers-reduced-motion: no-preference) { .rp-objev { animation: rp-objev .25s ease-out both; } }
+@keyframes rp-objev { from { opacity: 0; transform: translateY(6px); } }
 body.bily-report .hlavicka { background: var(--navy); }

@@ -377,7 +377,7 @@ async function zobrazBudovu(adresa, inz, puvod) {
     ["Městská část", "…"],
     ["Typ", typ === zpusob ? typ : `${typ} (v RÚIAN: ${zpusob})`],
     ["Čísla popisná budovy", b.cisladomovni],
-    ["Bytů v budově", b.pocetbytu ?? "–"],
+    ...(b.pocetbytu ? [["Bytů v budově", b.pocetbytu]] : []),
     ["Podlaží", b.pocetpodlazi ?? "–"],
     ["Konstrukce", KONSTRUKCE[b.druhkonstrukcekod] || "–"],
     ["Výtah", VYTAH[b.vybavenivytahemkod] || "–"],
@@ -389,7 +389,8 @@ async function zobrazBudovu(adresa, inz, puvod) {
       inz.patro != null && `${inz.patro}. NP`, inz.cena_kc && `${inz.cena_kc.toLocaleString("cs-CZ")} Kč`].filter(Boolean).join(", ");
     radky.push(["Inzerát", `${popis} (${inz.portal})`]);
   }
-  radky.push(["Jak jsme dům určili", `${puvod.jak}; jistota ${puvod.jistota}`]);
+  const JISTOTA = { "jistá": "jistě", "vysoká": "s vysokou jistotou", "střední": "se střední jistotou – zkontrolujte prosím adresu" };
+  radky.push(["Jak jsme dům určili", `${puvod.jak} (${JISTOTA[puvod.jistota] || puvod.jistota})`]);
   const alternativy = puvod.alternativy || [];
 
   const byt = typ === "bytový dům";
@@ -412,7 +413,11 @@ async function zobrazBudovu(adresa, inz, puvod) {
       ${alternativy.length ? `<div class="alternativy tlumene">Není to on? ${alternativy.map((a, i) =>
         `<button type="button" data-alt="${i}">${esc(a.adresa.split(",")[0])}</button>`).join("")}</div>` : ""}
     </div>` +
-    (jina ? "" : vPraze && window.OBJEDNAVKY?.zapnute ? `<div id="ochutnavka" class="karta och-karta"></div><div class="co-dal" id="objednat"></div>`
+    (jina ? `<div class="co-dal"><h3>Co s tím</h3>
+      <p>Prověrku zatím děláme pro byty a rodinné domy. Pokud jste zadali adresu jiné budovy, zkuste to znovu; jinak nám napište a prověrku zkusíme připravit ručně.</p>
+      <div class="akce"><button type="button" class="tl tmave-tl" data-znovu>Zadat jinou adresu</button>
+      <a class="tl obrys-tmave" href="mailto:info@predkoupi.cz?subject=${encodeURIComponent("Prověrka: " + adresa.adresa)}">Napsat nám</a></div></div>`
+      : vPraze && window.OBJEDNAVKY?.zapnute ? `<div id="ochutnavka" class="karta och-karta"></div><div class="co-dal" id="objednat"></div>`
       : vPraze ? `<div id="ochutnavka" class="karta och-karta"></div><div class="co-dal"><h3>Co dál</h3>
       <p>Objednávky Prověrky (790 Kč) a Prověrky PLUS (1 290 Kč) spouštíme v nejbližších týdnech.</p>
       <div class="akce"><a class="tl tmave-tl" href="/#ceny">Co obsahuje Prověrka</a></div><div class="co-dal-zajem" data-zajem data-zdroj="proverit"></div></div>`
@@ -424,7 +429,8 @@ async function zobrazBudovu(adresa, inz, puvod) {
         data-souhlas="Pošleme jedinou zprávu, až službu rozšíříme do vaší obce, a pak e-mail smažeme. Ukládáme jen e-mail a název obce."
         data-hotovo="až budeme prověřovat i ve vaší obci"></div></div>`);
   mcSlib.then((mc) => { const dd = [...$("vysledek").querySelectorAll("dt")].find((x) => x.textContent === "Městská část")?.nextElementSibling; if (dd) dd.textContent = mc || "–"; });
-  if ($("ochutnavka")) ochutnavka(adresa.so, $("ochutnavka"), { start: puvod.start, obrys: b.obrys });
+  if ($("ochutnavka")) ochutnavka(adresa.so, $("ochutnavka"), { start: puvod.start, obrys: b.obrys, rodinny: !byt });
+  $("vysledek").querySelector("[data-znovu]")?.addEventListener("click", () => { const v = $("vstup"); v.value = ""; v.focus(); v.scrollIntoView({ block: "center" }); });
   if ($("objednat")) window.objednavkaFormular($("objednat"), { adresa: adresa.adresa, typ, inz });
   document.querySelectorAll("#vysledek [data-zajem]").forEach((k) => window.zajemFormular?.(k));
   $("vysledek").querySelectorAll("button[data-alt]").forEach((btn) => btn.addEventListener("click", () =>
