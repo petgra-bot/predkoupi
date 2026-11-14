@@ -45,9 +45,10 @@
         </fieldset>
         ${byt ? `<div class="obj-radek">
           <label>Plocha bytu (m²)<input name="plocha" type="number" inputmode="decimal" min="10" max="500" step="0.1" value="${p(inz?.plocha_m2)}"></label>
-          <label>Číslo bytu, pokud ho znáte<input name="cislo_bytu" type="text" maxlength="20" placeholder="např. 1234/5 z kupní smlouvy"></label>
+          <label>Číslo bytu (jednotky), pokud ho znáte<input name="cislo_bytu" type="text" maxlength="20" autocomplete="off" placeholder="např. 1311/146"></label>
         </div>
-        <p class="obj-napoveda">Podle plochy najdeme byt v katastru. Když bude odpovídat víc bytů, po zaplacení vám je ukážeme na výběr.</p>` : ""}
+        <p class="obj-napoveda obj-cislo-tip"><b>S číslem bytu je report jistě k vašemu bytu.</b> Najdete ho v rezervační smlouvě, ve vyúčtování od SVJ, nebo se zeptejte makléře.
+          Bez něj byt najdeme podle plochy; když bude odpovídat víc bytů, po zaplacení vám je ukážeme na výběr.</p>` : ""}
         <div class="obj-plus" hidden>
           <p class="obj-napoveda">${inz ? "Co víme z inzerátu, je předvyplněné; doplňte zbytek." : "Pro odhad ceny opište z inzerátu cenu, plochu a stav."}</p>
           <div class="obj-radek">
@@ -62,7 +63,7 @@
         <label class="obj-email">E-mail pro report<input name="email" type="email" autocomplete="email" inputmode="email" autocapitalize="none" spellcheck="false" placeholder="jmeno@example.cz"></label>
         <p class="obj-navrh" hidden></p>
         <input type="text" name="web" tabindex="-1" autocomplete="off" class="skryte" aria-hidden="true">
-        <p class="obj-jistota">Když report nedodáme, vrátíme celé peníze.</p>
+        <p class="obj-jistota">Když report nedodáme, peníze vám vrátíme.</p>
         <label class="obj-souhlas"><input type="checkbox" name="souhlas">
           <span>Souhlasím s <a href="/podminky.html" target="_blank">obchodními podmínkami</a>. Chci report hned po zaplacení a beru na vědomí, že hotový report už nejde vrátit (odstoupit od smlouvy).</span></label>
         ${N.predvedeni ? `<p class="obj-zkusebni">Ukázka: nic se neplatí ani neodesílá. Průběh je zrychlený (skutečně do 5, u PLUS do 10 minut) a na konci uvidíte vzorový report ke Karlické 910/49 v Praze 16.</p>`
@@ -119,7 +120,8 @@
       const ch = [];
       const v = (x) => Number(String(x).replace(",", "."));
       if (byt) {
-        const pl = v(f.plocha.value);
+        const pl = v(f.plocha.value), cb = f.cislo_bytu.value.trim().replace(/\s+/g, "");
+        if (cb && !/^\d{1,5}\/\d{1,4}$/.test(cb)) ch.push([f.cislo_bytu, "Číslo bytu má tvar 1311/146 (číslo domu, lomítko, číslo bytu)."]);
         if (!f.cislo_bytu.value.trim() && !(pl > 0)) ch.push([f.plocha, "Doplňte plochu bytu z inzerátu (nebo číslo bytu)."]);
         else if (f.plocha.value && (pl < 10 || pl > 500)) ch.push([f.plocha, "Plocha bytu má být 10–500 m²."]);
       }
@@ -155,7 +157,7 @@
         balicek: balicek(), email: f.email.value.trim(), adresa, typ: byt ? "byt" : "dum", souhlas: true, web: f.web.value || null,
         inzerat: inz?.url || null,
         plocha: byt ? Number(String(f.plocha.value).replace(",", ".")) || null : (balicek() === "plus" ? Number(f.plocha_dum?.value) || null : null),
-        cislo_bytu: byt ? f.cislo_bytu.value.trim() || null : null,
+        cislo_bytu: byt ? f.cislo_bytu.value.trim().replace(/\s+/g, "") || null : null,
         cena: balicek() === "plus" ? cislo(f.cena.value) || null : null,
         patro: balicek() === "plus" && byt ? f.patro.value.trim() || null : null,
         stav: balicek() === "plus" ? f.stav.value : null,

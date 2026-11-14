@@ -432,6 +432,7 @@ async function zobrazBudovu(adresa, inz, puvod) {
   if ($("ochutnavka")) ochutnavka(adresa.so, $("ochutnavka"), { start: puvod.start, obrys: b.obrys, rodinny: !byt });
   $("vysledek").querySelector("[data-znovu]")?.addEventListener("click", () => { const v = $("vstup"); v.value = ""; v.focus(); v.scrollIntoView({ block: "center" }); });
   if ($("objednat")) window.objednavkaFormular($("objednat"), { adresa: adresa.adresa, typ, inz });
+  plovouciObjednat();
   document.querySelectorAll("#vysledek [data-zajem]").forEach((k) => window.zajemFormular?.(k));
   $("vysledek").querySelectorAll("button[data-alt]").forEach((btn) => btn.addEventListener("click", () =>
     zobrazBudovu(alternativy[+btn.dataset.alt], inz, { jak: "vybráno z nabídky", jistota: "jistá" }).catch(chyba)));
@@ -533,4 +534,30 @@ $("formular").addEventListener("submit", overit);
 {
   const q = new URLSearchParams(location.search).get("q");
   if (q) { $("vstup").value = q; $("formular").requestSubmit(); }
+}
+
+// Mobil a tablet: plovoucí „Objednat prověrku“, dokud formulář není na obrazovce (Petr 14. 11. 2026).
+let plovouciPozorovatel = null;
+function plovouciObjednat() {
+  document.querySelector(".obj-plovouci")?.remove();
+  plovouciPozorovatel?.disconnect();
+  const cil = $("objednat");
+  if (!cil || !window.IntersectionObserver) return;
+  const tl = document.createElement("a");
+  tl.className = "obj-plovouci"; tl.href = "#objednat"; tl.hidden = true;
+  tl.textContent = `Objednat prověrku · od ${window.OBJEDNAVKY.ceny.proverka.toLocaleString("cs-CZ")} Kč`;
+  tl.addEventListener("click", (e) => {
+    e.preventDefault();
+    cil.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+  });
+  document.body.appendChild(tl);
+  // Ukázat, až klient odroluje k přehledu (ne hned nahoře u pole), a schovat, když vidí formulář.
+  let vidiFormular = false, vidiPole = true;
+  const prepni = () => { tl.hidden = vidiFormular || vidiPole; };
+  plovouciPozorovatel = new IntersectionObserver((zaznamy) => {
+    zaznamy.forEach((z) => { if (z.target === cil) vidiFormular = z.isIntersecting; else vidiPole = z.isIntersecting; });
+    prepni();
+  });
+  plovouciPozorovatel.observe(cil);
+  if ($("vstup")) plovouciPozorovatel.observe($("vstup"));
 }

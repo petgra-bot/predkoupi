@@ -189,19 +189,19 @@ async function ochutnavka(soKod, cil, { start = performance.now(), obrys: znamy,
   try {
     const dum = znamy || (await ochVolej(`${OCH.RUIAN}/3/query`, { where: `kod=${Number(soKod)}`, outFields: "kod", returnGeometry: true, outSR: 5514 }, 3000)).features?.[0]?.geometry?.rings;
     if (!dum) throw new Error("obrys budovy v RÚIAN chybí");
-    // Letecký snímek ČÚZK, dům tyrkysově a šrafovaně (výřez 140 × 100 m kolem domu).
+    // Letecký snímek ČÚZK, dům bíle a šrafovaně s tmavým lemem (Petr 14. 11.: zpět k bílé; výřez 140 × 100 m kolem domu).
     const [cx, cy] = ochStred(dum), w = 140, h = 100, bbox = [cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2];
     const obr = `${OCH.ORTOFOTO}/export?bbox=${bbox.join(",")}&bboxSR=5514&imageSR=5514&size=700,500&format=jpg&f=image`;
     const sx = (x) => ((x - bbox[0]) / w * 700).toFixed(1), sy = (y) => ((bbox[3] - y) / h * 500).toFixed(1);
     const body = dum.map((r) => r.map(([x, y]) => `${sx(x)},${sy(y)}`).join(" "));
     const obrys = `<defs><pattern id="och-sraf" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-        <rect width="8" height="8" fill="rgba(40,220,255,.25)"/><line x1="0" y1="0" x2="0" y2="8" stroke="#28dcff" stroke-width="3"/></pattern></defs>` +
-      body.map((b) => `<polygon points="${b}" fill="url(#och-sraf)" stroke="#0a1e3c" stroke-width="6"/><polygon points="${b}" fill="none" stroke="#28dcff" stroke-width="3"/>`).join("");
+        <rect width="8" height="8" fill="rgba(255,255,255,.22)"/><line x1="0" y1="0" x2="0" y2="8" stroke="#fff" stroke-width="2.5"/></pattern></defs>` +
+      body.map((b) => `<polygon points="${b}" fill="url(#och-sraf)" stroke="#0a1e3c" stroke-width="6"/><polygon points="${b}" fill="none" stroke="#fff" stroke-width="3"/>`).join("");
     const oblasti = ochutnavkaOblasti(dum, rodinny);
     cil.innerHTML = `<details class="sbal ochutnavka" open>
       <summary><span class="hlavicka-sbal"><h2>Přehled zdarma</h2><span class="shrnuti">prověřujeme…</span></span><span class="prepinac" aria-hidden="true"></span></summary>
       <figure class="och-snimek"><img src="${obr}" alt="Letecký snímek okolí domu" width="700" height="500">
-        <svg viewBox="0 0 700 500" aria-hidden="true">${obrys}</svg><figcaption>Letecký snímek ČÚZK, prověřovaný dům tyrkysově.</figcaption></figure>
+        <svg viewBox="0 0 700 500" aria-hidden="true">${obrys}</svg><figcaption>Letecký snímek ČÚZK, prověřovaný dům bíle.</figcaption></figure>
       <table class="och-tabulka"><tbody>
         ${Object.keys(oblasti).map((n) => `<tr class="och-ceka" data-oblast="${esc(n)}"><th scope="row">${esc(n)}</th><td><span class="och-znacka ceka">Prověřujeme</span></td><td><span class="och-nacitani"></span></td></tr>`).join("")}
         ${OCH_ZAMCENE}

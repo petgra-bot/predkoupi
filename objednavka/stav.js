@@ -10,18 +10,20 @@
   const email = (() => { try { return sessionStorage.getItem("predkoupi-email") || ""; } catch { return ""; } })();
   let casovac = null, posledniStav = "", vykreslenProbeh = false, ticker = null;
 
-  // Co se v kterém kroku skutečně děje (zprávy se střídají, hotový krok se odškrtne).
-  const ZPRAVY = [
-    ["Platba přijata, děkujeme"],
-    ["Stahujeme aktuální výpis z katastru nemovitostí", "Čteme vlastníky, podíly a parcely", "Ověřujeme dům v registru budov a adres"],
-    ["Měříme vzdálenost ke stoleté vodě a povodni 2002", "Čteme hlukovou mapu u nejhlučnější fasády", "Kontrolujeme radonový index podloží",
+  // Co se v kterém kroku skutečně děje (zprávy se střídají, hotový krok se odškrtne). Klíče = faze[].klic ze serveru.
+  const ZPRAVY = {
+    platba: ["Platba přijata, děkujeme"],
+    katastr: ["Stahujeme aktuální výpis z katastru nemovitostí", "Čteme vlastníky, podíly a parcely", "Ověřujeme dům v registru budov a adres"],
+    fakta: ["Měříme vzdálenost ke stoleté vodě a povodni 2002", "Čteme hlukovou mapu u nejhlučnější fasády", "Kontrolujeme radonový index podloží",
      "Procházíme Metropolitní plán, koridory a uzávěry", "Hledáme dům v dokumentaci EIA", "Mapujeme vedení vysokého napětí a areály v okolí"],
-    ["Hledáme věcná břemena, zástavy, exekuce a plomby", "Ověřujeme vlastníky v insolvenčním rejstříku", "Vyhodnocujeme stavby a záměry v okolí"],
-    ["Skládáme verdikt a přehled šesti oblastí", "Píšeme úkoly na míru před rezervací, podpisem a převodem", "Vytváříme PDF"],
-    ["Kontrolujeme čísla proti zdrojům", "Druhá kontrola čte report očima kupujícího"],
-  ];
-  const ZPRAVY_PLUS = "Porovnáváme cenu se skutečnými prodeji v katastru";
-  const VAHY = [2, 15, 20, 25, 25, 13];   // přibližný podíl kroků na celkovém čase
+    pravni: ["Hledáme věcná břemena, zástavy, exekuce a plomby", "Ověřujeme vlastníky v insolvenčním rejstříku", "Vyhodnocujeme stavby a záměry v okolí"],
+    cena: ["Stahujeme skutečné prodeje z katastru", "Počítáme cenu za metr čtvereční", "Porovnáváme s požadovanou cenou"],
+    report: ["Skládáme verdikt a přehled šesti oblastí", "Píšeme úkoly na míru před rezervací, podpisem a převodem", "Vytváříme PDF"],
+    kontrola: ["Kontrolujeme čísla proti zdrojům", "Druhá kontrola čte report očima kupujícího"],
+  };
+  const VAHY = { platba: 2, katastr: 15, fakta: 20, pravni: 20, cena: 10, report: 20, kontrola: 13 };   // přibližný podíl na čase
+  const KLICE = ["platba", "katastr", "fakta", "pravni", "report", "kontrola"];   // starší server bez klíčů a bez kroku ceny
+  const klic = (f, i) => f.klic || KLICE[i] || "report";
 
   const karta = (trida, nadpis, obsah) => `<div class="karta ${trida}"><h2>${esc(nadpis)}</h2>${obsah}</div>`;
   const ochutnavka = (() => { try { return JSON.parse(sessionStorage.getItem("predkoupi-ochutnavka") || "null"); } catch { return null; } })();
@@ -30,7 +32,6 @@
   function probeh(o) {
     if (!vykreslenProbeh) {
       vykreslenProbeh = true;
-      const zpravy = ZPRAVY.map((z, i) => i === 3 && o.balicek.includes("PLUS") ? [...z, ZPRAVY_PLUS] : z);
       const snimek = o.letecky ? `<img src="${N.api}${o.letecky}" alt="Letecký snímek domu">` : ochutnavka?.snimek || "";
       $("objednavka").innerHTML = `
         <div class="pr">
@@ -39,8 +40,10 @@
           <div class="pr-hlavni">
             <div class="pr-ukazatel" role="progressbar" aria-label="Průběh prověrky" aria-valuemin="0" aria-valuemax="100">
               <span class="pr-procenta">0 %</span><span class="pr-cas"></span><div class="pr-pruh"><i></i></div></div>
-            <ol class="pr-kroky">${o.faze.map((f, i) => `<li data-i="${i}"><span class="pr-ikona" aria-hidden="true"></span>
-              <div><b>${esc(f.nazev)}</b><ul class="pr-zpravy">${zpravy[i].map((z) => `<li>${esc(z)}</li>`).join("")}</ul></div></li>`).join("")}</ol>
+            <ol class="pr-kroky">${o.faze.map((f, i) => f.zamceno
+              ? `<li class="zamceno"><span class="pr-ikona" aria-hidden="true"></span><div><b>${esc(f.nazev)}</b> <span class="pr-zamek">V Prověrce PLUS</span></div></li>`
+              : `<li><span class="pr-ikona" aria-hidden="true"></span>
+              <div><b>${esc(f.nazev)}</b><ul class="pr-zpravy">${(ZPRAVY[klic(f, i)] || []).map((z) => `<li>${esc(z)}</li>`).join("")}</ul></div></li>`).join("")}</ol>
             <p class="pr-odejit">Stránku můžete zavřít – report pošleme ${email ? `na <b>${esc(email)}</b>` : "e-mailem"} a uvidíte ho i tady. Zpravidla do ${o.dodani_min} minut.
               ${email ? `<span class="pr-preklep">Překlep v e-mailu? Napište nám na <a href="mailto:info@predkoupi.cz?subject=${encodeURIComponent("Oprava e-mailu, objednávka " + o.cislo)}">info@predkoupi.cz</a>.</span>` : ""}</p>
           </div>
@@ -54,18 +57,21 @@
     if (o.letecky && !$("objednavka").querySelector(".pr-snimek img[src*='letecky']")) {
       const f = $("objednavka").querySelector(".pr-snimek");
       f.classList.remove("pr-bez");
-      f.querySelector("img")?.remove();
+      // Obrys z přehledu zdarma (SVG) má jiný výřez než snímek ze serveru – smazat obojí, jinak je dům dvakrát.
+      f.querySelectorAll("img, svg").forEach((x) => x.remove());
       f.insertAdjacentHTML("afterbegin", `<img src="${N.api}${o.letecky}" alt="Letecký snímek domu">`);
     }
-    const hotovo = o.faze.map((f) => f.hotovo);
+    const kroky = o.faze.filter((f) => !f.zamceno);
+    const hotovo = kroky.map((f) => f.hotovo);
     const aktivni = hotovo.indexOf(false);
-    $("objednavka").querySelectorAll(".pr-kroky > li").forEach((li, i) => {
+    $("objednavka").querySelectorAll(".pr-kroky > li:not(.zamceno)").forEach((li, i) => {
       li.classList.toggle("hotovo", hotovo[i]);
       li.classList.toggle("aktivni", i === aktivni);
       if (hotovo[i]) li.querySelectorAll(".pr-zpravy li").forEach((z) => z.classList.add("ok"));
     });
     // Odhad procent: hotové kroky + uplynulý čas v aktivním kroku (nikdy přes 96 %, dokud není hotovo).
-    const celkem = o.dodani_min * 60, zaKroky = VAHY.reduce((s, v, i) => s + (hotovo[i] ? v : 0), 0);
+    const vahy = kroky.map((f, i) => VAHY[klic(f, i)] || 10), soucet = vahy.reduce((a, b) => a + b, 0);
+    const celkem = o.dodani_min * 60, zaKroky = vahy.reduce((s, v, i) => s + (hotovo[i] ? v : 0), 0) / soucet * 100;
     const casove = Math.min(96, (o.bezi_s / celkem) * 100);
     const pct = Math.round(Math.min(96, Math.max(zaKroky, casove, 3)));
     const u = $("objednavka").querySelector(".pr-ukazatel");
@@ -98,7 +104,7 @@
     // Krátká chvíle „Hotovo“ na konci průběhu (hodnocení 13. 11.): 100 %, odškrtnuté kroky, pak report.
     const pr = $("objednavka").querySelector(".pr");
     if (pr) {
-      pr.querySelectorAll(".pr-kroky > li").forEach((li) => { li.classList.add("hotovo"); li.classList.remove("aktivni"); });
+      pr.querySelectorAll(".pr-kroky > li:not(.zamceno)").forEach((li) => { li.classList.add("hotovo"); li.classList.remove("aktivni"); });
       const u = pr.querySelector(".pr-ukazatel");
       u.setAttribute("aria-valuenow", 100);
       u.querySelector(".pr-procenta").textContent = "100 %";
@@ -129,16 +135,17 @@
           ${k.nemovitost?.popis ? `<p class="rp-popis">${esc(k.nemovitost.popis)}</p>` : ""}
         </header>
         ${k.letecky ? `<figure class="rp-snimek"><img src="${N.api}${k.letecky}" alt="Letecký snímek domu" loading="lazy">
-          <figcaption>Letecký snímek ČÚZK; oranžově pozemky, tyrkysově dům.</figcaption></figure>` : ""}
+          <figcaption>Letecký snímek ČÚZK; oranžově pozemky, bíle dům.</figcaption></figure>` : ""}
         <div class="rp-verdikt ${esc(k.verdikt?.barva)}"><p class="rp-stitek-nad">Verdikt</p>
           <p class="rp-verdikt-text">${esc(k.verdikt?.text)}</p>
           ${(k.verdikt?.stitky || []).length ? `<p class="rp-stitky">${k.verdikt.stitky.map((s) => `<span class="${esc(s.barva)}">${esc(s.text)}</span>`).join("")}</p>` : ""}
         </div>
-        ${k.cena ? `<div class="rp-cena ${esc(k.cena.barva)}"><h2>Cena proti trhu</h2>
+        ${k.cena ? `<div class="rp-cena ${esc(k.cena.barva)}"><h2>Odhad ceny <span class="rp-odznak">Prověrka PLUS</span></h2>
           <dl><div><dt>${esc(k.cena.popisek || "Požadovaná cena")}</dt><dd>${esc(k.cena.pozadovana)}</dd></div>
           <div><dt>Trh v okolí</dt><dd>${esc(k.cena.trh)}</dd></div><div><dt>Rozdíl</dt><dd>${esc(k.cena.odchylka)}</dd></div></dl>
           <p>${esc(k.cena.text)}</p></div>`
-          : `<div class="rp-plus"><p><b>Nepřeplácíte?</b> Odhad ceny ze skutečných prodejů v katastru je v Prověrce PLUS. Rizika už máme, doplníme jen cenu za 500 Kč –
+          : `<div class="rp-plus"><h2>Odhad ceny <span class="rp-odznak zamceno">V Prověrce PLUS</span></h2>
+            <p><b>Nepřeplácíte?</b> Odhad ceny ze skutečných prodejů v katastru a srovnání s cenou v inzerátu je v Prověrce PLUS. Rizika už máme, doplníme jen cenu za 500 Kč –
             <a href="mailto:info@predkoupi.cz?subject=${encodeURIComponent("Doplnit odhad ceny, objednávka " + o.cislo)}">napište nám</a>.</p></div>`}
         <section><h2>Přehled</h2><ul class="rp-prehled">${(k.semafor || []).map((s) => `<li class="${esc(s.barva)}">
           <span class="rp-oblast">${esc(s.oblast)}</span>${stitek(s.barva)}<span class="rp-text">${esc(s.text)}</span></li>`).join("")}</ul></section>
@@ -181,10 +188,10 @@
     const obsah = {
       ceka_na_platbu: () => karta("upresnit", "Čekáme na potvrzení platby", `<p class="tlumene">Jakmile platební brána platbu potvrdí, prověrka se spustí sama. Obvykle to trvá pár vteřin.</p>`),
       zruseno: () => karta("chyba", "Platba nebyla dokončena", `<p class="tlumene">Nic jsme nestrhli. Objednávku můžete zopakovat.</p><p><a href="/proverit/?q=${encodeURIComponent(o.adresa)}">Zpět k nemovitosti</a></p>`),
-      zkusebni: () => karta("upresnit", "Zkušební platba proběhla", `<p class="tlumene">Platby spouštíme v nejbližších dnech. Ve zkušebním provozu se prověrka nespouští a nic se neplatí.</p>`),
+      zkusebni: () => karta("ok", "Zkušební platba proběhla", `<p class="tlumene">Platby spouštíme v nejbližších dnech. Ve zkušebním provozu se prověrka nespouští a nic se neplatí.</p>`),
       potrebuje_klienta: () => (o.kandidati || []).length
         ? karta("upresnit", "Který z těchto bytů?", `<p class="tlumene">Podle plochy odpovídá v domě víc bytů. Vyberte ten správný, report pak dokončíme do pár minut.</p>
-        <ul class="kandidati">${o.kandidati.map((k) => `<li><button type="button" data-byt="${esc(k.cislo)}">Byt č. ${esc(k.cislo)}${k.plocha_m2 ? ` <span class="tlumene">· podle podílu cca ${esc(k.plocha_m2)} m²</span>` : ""}</button></li>`).join("")}</ul>
+        <ul class="kandidati">${o.kandidati.map((k) => `<li><button type="button" data-byt="${esc(k.cislo)}">Byt č. ${esc(k.cislo)}${k.plocha_m2 ? ` <span class="tlumene">· podle podílu cca ${esc(k.plocha_m2)} m²</span>` : ""}${k.patro_odhad != null ? ` <span class="tlumene">· podle pořadí asi ${k.patro_odhad ? esc(k.patro_odhad) + ". patro" : "přízemí"}</span>` : ""}</button></li>`).join("")}</ul>
         <p class="tlumene">Číslo bytu najdete v kupní nebo rezervační smlouvě, případně se zeptejte makléře.</p>
         <p><button type="button" class="tl obrys" data-byt="zadny">Můj byt mezi nimi není</button></p>`)
         // Výpis domu bez podílů (test 8): plochu nejde spárovat, klient zadá číslo bytu sám.
@@ -194,7 +201,7 @@
           <button type="submit" class="tl">Pokračovat</button></form>
         <p class="tlumene">Najdete ho v rezervační nebo kupní smlouvě, ve vyúčtování od SVJ, případně se zeptejte makléře nebo prodávajícího.</p>
         <p><button type="button" class="tl obrys" data-byt="zadny">Číslo nemám – vyřiďte to ručně</button></p>`),
-      chyba: () => karta("chyba", "Report řešíme ručně", `<p class="tlumene">Při vytváření se objevil problém. Ozveme se e-mailem nejpozději do 24 hodin; když report nedodáme, vrátíme celé peníze.</p>`),
+      chyba: () => karta("chyba", "Report řešíme ručně", `<p class="tlumene">Při vytváření se objevil problém. Ozveme se e-mailem nejpozději do 24 hodin; když report nedodáme, peníze vám vrátíme.</p>`),
     }[o.stav];
     $("objednavka").innerHTML = obsah ? obsah() : karta("chyba", "Neznámý stav", "");
     $("objednavka").querySelector("form.cislo-bytu")?.addEventListener("submit", (e) => {

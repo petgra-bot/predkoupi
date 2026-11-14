@@ -9,7 +9,7 @@
 .pr-snimek figcaption { position: absolute; left: 0; right: 0; bottom: 0; padding: 28px 16px 12px; font-size: .9rem;
   background: linear-gradient(transparent, rgba(14,20,40,.9)); color: var(--text-t); }
 .pr-sken { position: absolute; inset: 0; pointer-events: none;
-  background: linear-gradient(180deg, transparent 0%, rgba(40,220,255,.0) 40%, rgba(40,220,255,.28) 50%, rgba(40,220,255,0) 60%, transparent 100%);
+  background: linear-gradient(180deg, transparent 0%, rgba(255,255,255,0) 40%, rgba(255,255,255,.22) 50%, rgba(255,255,255,0) 60%, transparent 100%);
   background-size: 100% 250%; }
 @media (prefers-reduced-motion: no-preference) { .pr-sken { animation: pr-sken 3.2s ease-in-out infinite; } }
 @keyframes pr-sken { from { background-position: 0 100%; } to { background-position: 0 0%; } }
@@ -150,3 +150,12 @@ body.bily-report .hlavicka { background: var(--navy); }
 .cislo-bytu input { min-height: 48px; padding: 0 14px; border: 1px solid rgba(255,255,255,.4); border-radius: 0; background: transparent; color: var(--text-t); font: 400 1rem "Montserrat", sans-serif; }
 .cislo-bytu input:focus-visible { outline: 2px solid var(--text-t); outline-offset: 1px; }
 .cislo-bytu .tl { min-height: 48px; }
+
+/* Krok Odhad ceny (14. 11.): v Prověrce zamčený, v PLUS běží; v reportu vlastní nadpis s odznakem */
+.pr-kroky > li.zamceno { color: var(--slabe-t); }
+.pr-kroky > li.zamceno .pr-ikona { border-style: dashed; }
+.pr-zamek { display: inline-block; margin-left: 6px; font-size: .66rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+  padding: 2px 7px; border: 1px solid var(--slabe-t); color: var(--slabe-t); white-space: nowrap; vertical-align: 1px; }
+.rp-odznak { display: inline-block; margin-left: 8px; font-size: .62rem; letter-spacing: .1em; padding: 3px 8px; background: var(--navy); color: #fff; vertical-align: 2px; }
+.rp-odznak.zamceno { background: transparent; color: var(--tlumene); border: 1px solid var(--linka); }
+.rp-plus h2 { margin-top: 0; }
