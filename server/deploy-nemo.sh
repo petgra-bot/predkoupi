@@ -32,14 +32,29 @@ sudo -u nemo bash -c "cd $APP/nemo && npm ci --silent --no-audit --no-fund </dev
 sudo -u nemo bash -c "cd $APP/nemo && npx playwright install chromium </dev/null >/dev/null"
 
 echo "== 4/6 Automatická aktualizace kódu každých 10 minut"
+# Stáhne novou verzi; když běží API objednávek (objednavky.sh), při změně ho restartuje.
+cat > /usr/local/bin/nemo-aktualizace <<S
+#!/usr/bin/env bash
+set -euo pipefail
+cd $APP
+pred=\$(sudo -u nemo git rev-parse HEAD)
+sudo -u nemo git fetch -q origin $VETEV
+sudo -u nemo git reset -q --hard origin/$VETEV
+po=\$(sudo -u nemo git rev-parse HEAD)
+[ "\$pred" = "\$po" ] && exit 0
+if ! sudo -u nemo git diff --quiet "\$pred" "\$po" -- nemo/requirements.txt; then
+  sudo -H -u nemo /home/nemo/venv/bin/pip install -q -r nemo/requirements.txt </dev/null
+fi
+systemctl is-enabled -q nemo-api 2>/dev/null && systemctl restart nemo-api
+echo "aktualizováno na \$(sudo -u nemo git log --oneline -1)"
+S
+chmod 755 /usr/local/bin/nemo-aktualizace
 cat > /etc/systemd/system/nemo-aktualizace.service <<S
 [Unit]
-Description=NEMO – stažení nové verze z GitHubu
+Description=NEMO – stažení nové verze z GitHubu (při změně restart API)
 [Service]
 Type=oneshot
-User=nemo
-WorkingDirectory=$APP
-ExecStart=/bin/bash -c 'git fetch -q origin $VETEV && git reset -q --hard origin/$VETEV'
+ExecStart=/usr/local/bin/nemo-aktualizace
 S
 cat > /etc/systemd/system/nemo-aktualizace.timer <<S
 [Unit]

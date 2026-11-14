@@ -40,7 +40,10 @@ DOCASNY=$(mktemp); chmod 600 "$DOCASNY"
 { echo "# Klíče NEMO – $(date '+%F %T'). Nesdílet, nekopírovat jinam."
   for k in ANTHROPIC_API_KEY SMTP_USER SMTP_PASS WSDP_USER WSDP_PASS CEE_P_API_KEY CEE_P_API_SECRET CEE_T_API_KEY CEE_T_API_SECRET; do
     printf '%s=%s\n' "$k" "${NOVE[$k]}"
-  done; } > "$DOCASNY"
+  done
+  # Ostatní klíče (např. COMGATE_* z objednavky.sh) zůstávají beze změny.
+  grep -vE '^(#|ANTHROPIC_API_KEY|SMTP_USER|SMTP_PASS|WSDP_USER|WSDP_PASS|CEE_P_API_KEY|CEE_P_API_SECRET|CEE_T_API_KEY|CEE_T_API_SECRET)=?' "$SOUBOR" | grep '=' || true
+  } > "$DOCASNY"
 install -o nemo -g nemo -m 600 "$DOCASNY" "$SOUBOR"; rm -f "$DOCASNY"
 echo "Uloženo do $SOUBOR (práva 600, vlastník nemo)."
 
