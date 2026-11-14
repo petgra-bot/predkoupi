@@ -1,7 +1,7 @@
 // Objednávky: kde jsou zapnuté a kam se posílají. Soubor je stejný na produkci i na testu.
 // Do instalace serveru objednávek jen test (proverka.gratzer.cz); na produkci zapnout přepsáním PRODUKCE na true.
 (() => {
-  const PRODUKCE = false;
+  const PRODUKCE = true;   // zapnuto 14. 11. 2026 se zkušebním textem (platby testovací do schválení Comgate)
   const h = location.hostname;
   const lokalne = h === "localhost" || h === "127.0.0.1";
   const test = h.startsWith("proverka.") || lokalne;
