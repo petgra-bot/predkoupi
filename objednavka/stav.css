@@ -143,3 +143,10 @@ body.bily-report .paticka-zdroje { color: var(--tlumene); }
 @media (prefers-reduced-motion: no-preference) { .rp-objev { animation: rp-objev .25s ease-out both; } }
 @keyframes rp-objev { from { opacity: 0; transform: translateY(6px); } }
 body.bily-report .hlavicka { background: var(--navy); }
+
+/* Číslo bytu zadané ručně (výpis domu bez podílů, test 8) */
+.cislo-bytu { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; margin: 14px 0; }
+.cislo-bytu label { display: grid; gap: 6px; font-weight: 600; font-size: .9rem; flex: 1 1 220px; }
+.cislo-bytu input { min-height: 48px; padding: 0 14px; border: 1px solid rgba(255,255,255,.4); border-radius: 0; background: transparent; color: var(--text-t); font: 400 1rem "Montserrat", sans-serif; }
+.cislo-bytu input:focus-visible { outline: 2px solid var(--text-t); outline-offset: 1px; }
+.cislo-bytu .tl { min-height: 48px; }
