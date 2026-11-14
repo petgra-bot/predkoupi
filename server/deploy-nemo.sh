@@ -13,7 +13,7 @@ export DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a NEEDRESTART_SUSPEND=1
 echo "== 1/6 GitHub: ověření klíče a stažení kódu"
 sudo -u nemo bash -c 'ssh-keyscan -t ed25519 github.com >> ~/.ssh/known_hosts 2>/dev/null; sort -u -o ~/.ssh/known_hosts ~/.ssh/known_hosts'
 if [ -d "$APP/.git" ]; then
-  sudo -u nemo git -C "$APP" fetch -q origin "$VETEV" && sudo -u nemo git -C "$APP" checkout -q "$VETEV" && sudo -u nemo git -C "$APP" reset -q --hard "origin/$VETEV"
+  sudo -u nemo git -C "$APP" remote set-branches --add origin "$VETEV"; sudo -u nemo git -C "$APP" fetch -q origin "+refs/heads/$VETEV:refs/remotes/origin/$VETEV" && sudo -u nemo git -C "$APP" checkout -q "$VETEV" && sudo -u nemo git -C "$APP" reset -q --hard "origin/$VETEV"
 else
   sudo -u nemo git clone -q --depth 50 --branch "$VETEV" "$REPO" "$APP"
 fi

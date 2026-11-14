@@ -15,7 +15,7 @@ DOMENA=api.predkoupi.cz
 export DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a NEEDRESTART_SUSPEND=1
 
 echo "== 1/7 Nejnovější kód a knihovny"
-sudo -H -u nemo git -C "$APP" fetch -q origin "$VETEV" && sudo -H -u nemo git -C "$APP" reset -q --hard "origin/$VETEV"
+sudo -H -u nemo git -C "$APP" remote set-branches --add origin "$VETEV"; sudo -H -u nemo git -C "$APP" fetch -q origin "+refs/heads/$VETEV:refs/remotes/origin/$VETEV" && sudo -H -u nemo git -C "$APP" reset -q --hard "origin/$VETEV"
 sudo -H -u nemo /home/nemo/venv/bin/pip install -q -r "$NEMO/requirements.txt" </dev/null
 echo "Kód: $(sudo -u nemo git -C "$APP" log --oneline -1)"
 

@@ -19,7 +19,9 @@ CFG=/home/nemo/.config/nemo
 export DEBIAN_FRONTEND=noninteractive
 
 echo "== 1/6 Ostrá instance na větev $V_OSTRA"
-sudo -H -u nemo git -C "$OSTRA" fetch -q origin "$V_OSTRA"
+# Klon byl jen pro jednu větev (git clone --branch): přidat ostrou větev do sledovaných, jinak ji fetch nestáhne.
+sudo -H -u nemo git -C "$OSTRA" remote set-branches --add origin "$V_OSTRA"
+sudo -H -u nemo git -C "$OSTRA" fetch -q origin "+refs/heads/$V_OSTRA:refs/remotes/origin/$V_OSTRA"
 sudo -H -u nemo git -C "$OSTRA" checkout -q -B "$V_OSTRA" "origin/$V_OSTRA"
 sudo -H -u nemo git -C "$OSTRA" reset -q --hard "origin/$V_OSTRA"
 echo "Ostrá: $(sudo -u nemo git -C "$OSTRA" log --oneline -1)"
