@@ -223,6 +223,7 @@
         // Výpis domu bez podílů (test 8): plochu nejde spárovat, klient zadá číslo bytu sám.
         : karta("upresnit", "Které číslo má váš byt?", `<p class="tlumene">V domě je hodně bytů a podle plochy jsme ten váš nedokázali jednoznačně určit.
           Zadejte číslo bytu (jednotky) ve tvaru <b>1311/146</b>, report pak dokončíme do pár minut.</p>
+        ${o.napoveda ? `<p class="tlumene"><b>${esc(o.napoveda)}</b></p>` : ""}
         <form class="cislo-bytu"><label>Číslo bytu<input name="cislo" autocomplete="off" autocapitalize="none" placeholder="např. 1311/146" required pattern="\\d{1,5}/\\d{1,4}"></label>
           <button type="submit" class="tl">Pokračovat</button></form>
         <p class="tlumene">Najdete ho v rezervační nebo kupní smlouvě, ve vyúčtování od SVJ, případně se zeptejte makléře nebo prodávajícího.</p>
