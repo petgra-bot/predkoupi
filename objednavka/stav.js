@@ -29,8 +29,8 @@
   const ochutnavka = (() => { try { return JSON.parse(sessionStorage.getItem("predkoupi-ochutnavka") || "null"); } catch { return null; } })();
 
   // Varianta B (Petr 14. 11. 2026): oddálený letecký snímek okolí (cca 320 m) s bílým obrysem domu a v rohu mapka Prahy s tečkou.
-  // Na počítači je snímek vyšší (vyplní levý sloupec vedle kroků), na mobilu na šířku. Bez obrysu z přehledu zdarma (odkaz z e-mailu)
-  // zůstává snímek ze serveru.
+  // Na počítači je snímek vyšší (vyplní levý sloupec vedle kroků), na mobilu na šířku. Obrys domu posílá server (uložený
+  // s objednávkou), takže funguje i z odkazu v e-mailu; bez obrysu zůstává snímek ze serveru.
   function snimekOkoli(dum) {
     if (!Array.isArray(dum) || !dum.length) return "";
     const body = dum.flat(), sx = body.map((b) => b[0]), sy = body.map((b) => b[1]);
@@ -57,7 +57,7 @@
   function probeh(o) {
     if (!vykreslenProbeh) {
       vykreslenProbeh = true;
-      const vlastni = snimekOkoli(ochutnavka?.obrys);
+      const vlastni = snimekOkoli(o.obrys || ochutnavka?.obrys);
       const snimek = vlastni || (o.letecky ? `<img src="${N.api}${o.letecky}" alt="Letecký snímek domu">` : ochutnavka?.snimek || "");
       $("objednavka").innerHTML = `
         <div class="pr">

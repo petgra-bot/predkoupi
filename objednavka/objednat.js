@@ -161,6 +161,8 @@
         cena: balicek() === "plus" ? cislo(f.cena.value) || null : null,
         patro: balicek() === "plus" && byt ? f.patro.value.trim() || null : null,
         stav: balicek() === "plus" ? f.stav.value : null,
+        // Obrys domu z přehledu zdarma: server ho vrátí stránce průběhu (snímek a mapka Prahy i z odkazu v e-mailu).
+        obrys: (() => { try { return JSON.parse(document.getElementById("ochutnavka")?.dataset.obrys || "null"); } catch { return null; } })(),
       };
       tl.disabled = true; zprava.textContent = N.predvedeni ? "Spouštíme ukázku…" : "Připravujeme platbu…"; zprava.dataset.typ = "";
       try {
