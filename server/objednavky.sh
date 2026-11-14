@@ -141,13 +141,16 @@ SSH_PORT=$(echo "${SSH_CONNECTION:-}" | awk '{print $4}')
 [ -n "$SSH_PORT" ] || SSH_PORT=$( (sshd -T 2>/dev/null || true) | awk '/^port /{print $2; exit}')
 SSH_PORT=${SSH_PORT:-22}
 command -v ufw >/dev/null || apt-get install -y -qq ufw >/dev/null
-ufw allow "$SSH_PORT/tcp" >/dev/null
-ufw allow 80/tcp >/dev/null
-ufw allow 443/tcp >/dev/null
-ufw default deny incoming >/dev/null
-ufw default allow outgoing >/dev/null
-ufw --force enable >/dev/null
-echo "Povoleno: SSH (port $SSH_PORT), 80, 443. Ostatní příchozí spojení blokována."
+# Firewall je doplňková ochrana (API stejně poslouchá jen místně); když ufw selže, skript pokračuje a vypíše proč.
+firewall() {
+  ufw allow "$SSH_PORT/tcp" && ufw allow 80/tcp && ufw allow 443/tcp \
+    && ufw default deny incoming && ufw default allow outgoing && ufw --force enable
+}
+if firewall >/tmp/nemo-ufw.log 2>&1; then
+  echo "Povoleno: SSH (port $SSH_PORT), 80, 443. Ostatní příchozí spojení blokována."
+else
+  echo "!! Firewall se nepodařilo zapnout (pokračuji dál). Podrobnosti:"; tail -5 /tmp/nemo-ufw.log
+fi
 
 echo "== 6/7 Comgate: adresa pro oznámení o platbě a povolená IP serveru"
 cd "$NEMO" && sudo -H -u nemo "$PY" -m objednavky.comgate_nastav || echo "!! Comgate se nepodařilo nastavit – zkontrolujte identifikátor a heslo (spusťte skript znovu)"
