@@ -9,7 +9,7 @@ set -euo pipefail
 APP=/home/nemo/app
 NEMO=$APP/nemo
 PY=/home/nemo/venv/bin/python
-VETEV="claude/kind-davinci-ue2jrk"
+VETEV="nemo-ostra"   # ostrá větev; testovací instanci spravuje rozdeleni.sh
 SOUBOR=/home/nemo/.config/nemo/klice.env
 DOMENA=api.predkoupi.cz
 export DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a NEEDRESTART_SUSPEND=1
@@ -40,6 +40,11 @@ done
 [ -n "$(stara COMGATE_TEST)" ] || nastav COMGATE_TEST 1
 echo "Uloženo do $SOUBOR (práva 600, vlastník nemo)."
 
+if [ -d /home/nemo/app-test/.git ]; then   # server je rozdělený (rozdeleni.sh): tady jen klíče a nastavení Comgate
+  cd "$NEMO" && sudo -H -u nemo "$PY" -m objednavky.comgate_nastav || echo "!! Comgate se nepodařilo nastavit"
+  systemctl restart nemo-api nemo-fronta nemo-api-test nemo-fronta-test
+  echo "Klíče uloženy, služby restartovány. Služby a Caddy spravuje rozdeleni.sh."; exit 0
+fi
 echo "== 3/7 Služby: API objednávek, fronta prověrek, denní úklid, aktualizace kódu"
 cat > /etc/systemd/system/nemo-api.service <<S
 [Unit]
@@ -88,6 +93,7 @@ Persistent=true
 WantedBy=timers.target
 S
 # Aktualizace kódu: stáhne novou verzi a při změně restartuje API (fronta se restartuje sama, až dokončí prověrku).
+if ! grep -q app-test /usr/local/bin/nemo-aktualizace 2>/dev/null; then   # po rozdělení ho spravuje rozdeleni.sh
 cat > /usr/local/bin/nemo-aktualizace <<S
 #!/usr/bin/env bash
 set -euo pipefail
@@ -104,6 +110,7 @@ systemctl is-enabled -q nemo-api 2>/dev/null && systemctl restart nemo-api
 echo "aktualizováno na \$(sudo -u nemo git log --oneline -1)"
 S
 chmod 755 /usr/local/bin/nemo-aktualizace
+fi
 cat > /etc/systemd/system/nemo-aktualizace.service <<S
 [Unit]
 Description=NEMO – stažení nové verze z GitHubu (při změně restart API)

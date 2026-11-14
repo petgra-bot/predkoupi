@@ -6,7 +6,7 @@
 set -euo pipefail
 [ "$(id -u)" = 0 ] || { echo "Spusťte jako root."; exit 1; }
 REPO="git@github.com:petgra-bot/automatic-enigma.git"
-VETEV="claude/kind-davinci-ue2jrk"          # vývojová větev NEMO (později main)
+VETEV="nemo-ostra"          # ostrá větev NEMO (testovací instance: rozdeleni.sh)
 APP=/home/nemo/app
 export DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a NEEDRESTART_SUSPEND=1
 
@@ -33,6 +33,7 @@ sudo -u nemo bash -c "cd $APP/nemo && npx playwright install chromium </dev/null
 
 echo "== 4/6 Automatická aktualizace kódu každých 10 minut"
 # Stáhne novou verzi; když běží API objednávek (objednavky.sh), při změně ho restartuje.
+if ! grep -q app-test /usr/local/bin/nemo-aktualizace 2>/dev/null; then   # po rozdělení ho spravuje rozdeleni.sh
 cat > /usr/local/bin/nemo-aktualizace <<S
 #!/usr/bin/env bash
 set -euo pipefail
@@ -49,6 +50,7 @@ systemctl is-enabled -q nemo-api 2>/dev/null && systemctl restart nemo-api
 echo "aktualizováno na \$(sudo -u nemo git log --oneline -1)"
 S
 chmod 755 /usr/local/bin/nemo-aktualizace
+fi
 cat > /etc/systemd/system/nemo-aktualizace.service <<S
 [Unit]
 Description=NEMO – stažení nové verze z GitHubu (při změně restart API)
