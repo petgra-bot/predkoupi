@@ -183,11 +183,16 @@
       zruseno: () => karta("chyba", "Platba nebyla dokončena", `<p class="tlumene">Nic jsme nestrhli. Objednávku můžete zopakovat.</p><p><a href="/proverit/?q=${encodeURIComponent(o.adresa)}">Zpět k nemovitosti</a></p>`),
       zkusebni: () => karta("upresnit", "Zkušební platba proběhla", `<p class="tlumene">Platby spouštíme v nejbližších dnech. Ve zkušebním provozu se prověrka nespouští a nic se neplatí.</p>`),
       potrebuje_klienta: () => karta("upresnit", "Který z těchto bytů?", `<p class="tlumene">Podle plochy odpovídá v domě víc bytů. Vyberte ten správný, report pak dokončíme do pár minut.</p>
-        <ul class="kandidati">${(o.kandidati || []).map((k) => `<li><button type="button" data-byt="${esc(k.cislo)}">Byt č. ${esc(k.cislo)}${k.plocha_m2 ? ` <span class="tlumene">· podle podílu cca ${esc(k.plocha_m2)} m²</span>` : ""}</button></li>`).join("")}</ul>`),
+        <ul class="kandidati">${(o.kandidati || []).map((k) => `<li><button type="button" data-byt="${esc(k.cislo)}">Byt č. ${esc(k.cislo)}${k.plocha_m2 ? ` <span class="tlumene">· podle podílu cca ${esc(k.plocha_m2)} m²</span>` : ""}</button></li>`).join("")}</ul>
+        <p class="tlumene">Číslo bytu najdete v kupní nebo rezervační smlouvě, případně se zeptejte makléře.</p>
+        <p><button type="button" class="tl obrys" data-byt="zadny">Můj byt mezi nimi není</button></p>`),
       chyba: () => karta("chyba", "Report řešíme ručně", `<p class="tlumene">Při vytváření se objevil problém. Ozveme se e-mailem nejpozději do 24 hodin; když report nedodáme, vrátíme celé peníze.</p>`),
     }[o.stav];
     $("objednavka").innerHTML = obsah ? obsah() : karta("chyba", "Neznámý stav", "");
-    $("objednavka").querySelectorAll("button[data-byt]").forEach((b) => b.addEventListener("click", () => vyberByt(b.dataset.byt)));
+    $("objednavka").querySelectorAll("button[data-byt]").forEach((b) => b.addEventListener("click", () => {
+      if (b.dataset.byt === "zadny" && !confirm("Váš byt dohledáme ručně a ozveme se e-mailem do 24 hodin. Pokračovat?")) return;
+      vyberByt(b.dataset.byt);
+    }));
   }
 
   async function vyberByt(cislo) {
