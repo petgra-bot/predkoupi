@@ -189,6 +189,7 @@ async function ochutnavka(soKod, cil, { start = performance.now(), obrys: znamy,
   try {
     const dum = znamy || (await ochVolej(`${OCH.RUIAN}/3/query`, { where: `kod=${Number(soKod)}`, outFields: "kod", returnGeometry: true, outSR: 5514 }, 3000)).features?.[0]?.geometry?.rings;
     if (!dum) throw new Error("obrys budovy v RÚIAN chybí");
+    cil.dataset.obrys = JSON.stringify(dum.map((r) => r.map(([x, y]) => [Math.round(x * 10) / 10, Math.round(y * 10) / 10])));   // pro stránku průběhu
     // Letecký snímek ČÚZK, dům bíle a šrafovaně s tmavým lemem (Petr 14. 11.: zpět k bílé; výřez 140 × 100 m kolem domu).
     const [cx, cy] = ochStred(dum), w = 140, h = 100, bbox = [cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2];
     const obr = `${OCH.ORTOFOTO}/export?bbox=${bbox.join(",")}&bboxSR=5514&imageSR=5514&size=700,500&format=jpg&f=image`;

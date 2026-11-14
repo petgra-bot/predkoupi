@@ -28,14 +28,40 @@
   const karta = (trida, nadpis, obsah) => `<div class="karta ${trida}"><h2>${esc(nadpis)}</h2>${obsah}</div>`;
   const ochutnavka = (() => { try { return JSON.parse(sessionStorage.getItem("predkoupi-ochutnavka") || "null"); } catch { return null; } })();
 
+  // Varianta B (Petr 14. 11. 2026): oddálený letecký snímek okolí (cca 320 m) s bílým obrysem domu a v rohu mapka Prahy s tečkou.
+  // Na počítači je snímek vyšší (vyplní levý sloupec vedle kroků), na mobilu na šířku. Bez obrysu z přehledu zdarma (odkaz z e-mailu)
+  // zůstává snímek ze serveru.
+  function snimekOkoli(dum) {
+    if (!Array.isArray(dum) || !dum.length) return "";
+    const body = dum.flat(), sx = body.map((b) => b[0]), sy = body.map((b) => b[1]);
+    const cx = (Math.min(...sx) + Math.max(...sx)) / 2, cy = (Math.min(...sy) + Math.max(...sy)) / 2;
+    const vysoky = matchMedia("(min-width: 900px)").matches;
+    // Přiblížení podle velikosti domu: rodinný dům cca 220 m, velký panelák nejvýš 340 m (původně 140 m, varianta B 700 m).
+    const sirka = Math.min(340, Math.max(220, 5 * Math.max(Math.max(...sx) - Math.min(...sx), Math.max(...sy) - Math.min(...sy))));
+    const [w, h, pw, ph] = vysoky ? [sirka, sirka * 1.3125, 640, 840] : [sirka, sirka * 5 / 7, 700, 500];
+    const bbox = [cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2];
+    const obr = `https://ags.cuzk.gov.cz/arcgis1/rest/services/ORTOFOTO/MapServer/export?bbox=${bbox.join(",")}&bboxSR=5514&imageSR=5514&size=${pw},${ph}&format=jpg&f=image`;
+    const X = (x) => ((x - bbox[0]) / w * pw).toFixed(1), Y = (y) => ((bbox[3] - y) / h * ph).toFixed(1);
+    const poly = dum.map((r) => r.map(([x, y]) => `${X(x)},${Y(y)}`).join(" "));
+    const obrys = poly.map((p) => `<polygon points="${p}" fill="rgba(255,255,255,.28)" stroke="#0a1e3c" stroke-width="5"/><polygon points="${p}" fill="none" stroke="#fff" stroke-width="2.5"/>`).join("");
+    const P = window.PRAHA;
+    const mapka = P ? (() => {
+      const mx = (cx - P.x0) / (P.x1 - P.x0) * P.w, my = (P.y1 - cy) / (P.y1 - P.y0) * P.h;
+      return `<div class="pr-praha" aria-hidden="true"><svg viewBox="-6 -6 ${P.w + 12} ${P.h + 12}"><path d="${P.d}" fill="rgba(255,255,255,.12)" stroke="#fff" stroke-width="2"/>
+        <circle class="pr-praha-pulz" cx="${mx.toFixed(1)}" cy="${my.toFixed(1)}" r="7" fill="#fff"/><circle cx="${mx.toFixed(1)}" cy="${my.toFixed(1)}" r="7" fill="#fff" stroke="#1e2645" stroke-width="3"/></svg><span>Praha</span></div>`;
+    })() : "";
+    return `<img src="${obr}" alt="Letecký snímek okolí domu" width="${pw}" height="${ph}"><svg class="pr-obrys" viewBox="0 0 ${pw} ${ph}" aria-hidden="true">${obrys}</svg>${mapka}`;
+  }
+
   // ---------- průběh ----------
   function probeh(o) {
     if (!vykreslenProbeh) {
       vykreslenProbeh = true;
-      const snimek = o.letecky ? `<img src="${N.api}${o.letecky}" alt="Letecký snímek domu">` : ochutnavka?.snimek || "";
+      const vlastni = snimekOkoli(ochutnavka?.obrys);
+      const snimek = vlastni || (o.letecky ? `<img src="${N.api}${o.letecky}" alt="Letecký snímek domu">` : ochutnavka?.snimek || "");
       $("objednavka").innerHTML = `
         <div class="pr">
-          <figure class="pr-snimek${snimek ? "" : " pr-bez"}">${snimek}<span class="pr-sken" aria-hidden="true"></span>
+          <figure class="pr-snimek${snimek ? "" : " pr-bez"}${vlastni ? " pr-okoli" : ""}">${snimek}<span class="pr-sken" aria-hidden="true"></span>
             <figcaption>Prověřujeme <b>${esc(kratkaAdresa(o.adresa))}</b></figcaption></figure>
           <div class="pr-hlavni">
             <div class="pr-ukazatel" role="progressbar" aria-label="Průběh prověrky" aria-valuemin="0" aria-valuemax="100">
@@ -54,7 +80,7 @@
       clearInterval(ticker);
       ticker = setInterval(() => posunZpravu(), tiche ? 4000 : 2600);
     }
-    if (o.letecky && !$("objednavka").querySelector(".pr-snimek img[src*='letecky']")) {
+    if (o.letecky && !$("objednavka").querySelector(".pr-snimek.pr-okoli") && !$("objednavka").querySelector(".pr-snimek img[src*='letecky']")) {
       const f = $("objednavka").querySelector(".pr-snimek");
       f.classList.remove("pr-bez");
       // Obrys z přehledu zdarma (SVG) má jiný výřez než snímek ze serveru – smazat obojí, jinak je dům dvakrát.

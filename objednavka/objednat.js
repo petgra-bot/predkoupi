@@ -172,6 +172,7 @@
           const och = document.getElementById("ochutnavka");
           sessionStorage.setItem("predkoupi-ochutnavka", JSON.stringify({
             snimek: och?.querySelector(".och-snimek")?.innerHTML.replace(/<figcaption>.*<\/figcaption>/s, "") || "",
+            obrys: och?.dataset.obrys ? JSON.parse(och.dataset.obrys) : null,   // obrys domu v S-JTSK pro snímek a mapku Prahy v průběhu
             oblasti: [...(och?.querySelectorAll("tr[data-oblast]") || [])].map((tr) => ({ oblast: tr.dataset.oblast,
               barva: [...tr.querySelector(".och-znacka").classList].find((c) => ["zelena", "oranzova", "cervena", "seda"].includes(c)) || "seda",
               text: tr.cells[2].textContent.trim() })),
