@@ -135,7 +135,11 @@ caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile >/dev/null
 systemctl enable -q caddy && systemctl reload-or-restart caddy
 
 echo "== 5/7 Firewall: povolit jen SSH, HTTP a HTTPS"
-SSH_PORT=$(sshd -T 2>/dev/null | awk '/^port /{print $2; exit}'); SSH_PORT=${SSH_PORT:-22}
+# Port SSH: z právě otevřeného spojení (nejjistější), jinak z konfigurace sshd, jinak 22.
+# (sshd -T na Ubuntu 24.04 bez /run/sshd selže – proto || true, jinak by skript tiše skončil.)
+SSH_PORT=$(echo "${SSH_CONNECTION:-}" | awk '{print $4}')
+[ -n "$SSH_PORT" ] || SSH_PORT=$( (sshd -T 2>/dev/null || true) | awk '/^port /{print $2; exit}')
+SSH_PORT=${SSH_PORT:-22}
 command -v ufw >/dev/null || apt-get install -y -qq ufw >/dev/null
 ufw allow "$SSH_PORT/tcp" >/dev/null
 ufw allow 80/tcp >/dev/null
