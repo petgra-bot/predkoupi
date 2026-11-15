@@ -31,6 +31,7 @@
   // Varianta B (Petr 14. 11. 2026): oddálený letecký snímek okolí (cca 320 m) s bílým obrysem domu a v rohu mapka Prahy s tečkou.
   // Na počítači je snímek vyšší (vyplní levý sloupec vedle kroků), na mobilu na šířku. Obrys domu posílá server (uložený
   // s objednávkou), takže funguje i z odkazu v e-mailu; bez obrysu zůstává snímek ze serveru.
+  let adresaMapky = "";
   function snimekOkoli(dum) {
     if (!Array.isArray(dum) || !dum.length) return "";
     const body = dum.flat(), sx = body.map((b) => b[0]), sy = body.map((b) => b[1]);
@@ -44,12 +45,7 @@
     const X = (x) => ((x - bbox[0]) / w * pw).toFixed(1), Y = (y) => ((bbox[3] - y) / h * ph).toFixed(1);
     const poly = dum.map((r) => r.map(([x, y]) => `${X(x)},${Y(y)}`).join(" "));
     const obrys = poly.map((p) => `<polygon points="${p}" fill="rgba(255,255,255,.28)" stroke="#0a1e3c" stroke-width="5"/><polygon points="${p}" fill="none" stroke="#fff" stroke-width="2.5"/>`).join("");
-    const P = window.PRAHA;
-    const mapka = P ? (() => {
-      const mx = (cx - P.x0) / (P.x1 - P.x0) * P.w, my = (P.y1 - cy) / (P.y1 - P.y0) * P.h;
-      return `<div class="pr-praha" aria-hidden="true"><svg viewBox="-6 -6 ${P.w + 12} ${P.h + 12}"><path d="${P.d}" fill="rgba(255,255,255,.12)" stroke="#fff" stroke-width="2"/>
-        <circle class="pr-praha-pulz" cx="${mx.toFixed(1)}" cy="${my.toFixed(1)}" r="7" fill="#fff"/><circle cx="${mx.toFixed(1)}" cy="${my.toFixed(1)}" r="7" fill="#fff" stroke="#1e2645" stroke-width="3"/></svg><span>Praha</span></div>`;
-    })() : "";
+    const mapka = window.PRAHA?.mapka ? window.PRAHA.mapka(cx, cy, adresaMapky, "pr") : "";
     return `<img src="${obr}" alt="Letecký snímek okolí domu" width="${pw}" height="${ph}"><svg class="pr-obrys" viewBox="0 0 ${pw} ${ph}" aria-hidden="true">${obrys}</svg>${mapka}`;
   }
 
@@ -57,6 +53,7 @@
   function probeh(o) {
     if (!vykreslenProbeh) {
       vykreslenProbeh = true;
+      adresaMapky = o.adresa;
       const vlastni = snimekOkoli(o.obrys || ochutnavka?.obrys);
       const snimek = vlastni || (o.letecky ? `<img src="${N.api}${o.letecky}" alt="Letecký snímek domu">` : ochutnavka?.snimek || "");
       $("objednavka").innerHTML = `

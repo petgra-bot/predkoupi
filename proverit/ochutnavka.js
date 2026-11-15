@@ -28,14 +28,6 @@ const OCH_AREALY = {
 // ---------- dotazy ----------
 // Ochutnávka má na všechno nejvýš 7 s (Petr 13. 11. 2026: 5 s; 15. 11. prodlouženo na 7 s – pomalé služby): dotazy se ukončí v termínu OCH_KONEC.
 let OCH_KONEC = Infinity;
-// Malá mapa Prahy s tečkou v rohu snímku (Petr 15. 11. 2026, jako na obrazovce průběhu); obrys Prahy z /objednavka/praha.js.
-function ochMapkaPrahy(cx, cy) {
-  const P = window.PRAHA;
-  if (!P) return "";
-  const mx = ((cx - P.x0) / (P.x1 - P.x0) * P.w).toFixed(1), my = ((P.y1 - cy) / (P.y1 - P.y0) * P.h).toFixed(1);
-  return `<div class="och-praha" aria-hidden="true"><svg viewBox="-6 -6 ${P.w + 12} ${P.h + 12}"><path d="${P.d}" fill="rgba(255,255,255,.12)" stroke="#fff" stroke-width="2"/>
-    <circle class="och-praha-pulz" cx="${mx}" cy="${my}" r="7" fill="#fff"/><circle cx="${mx}" cy="${my}" r="7" fill="#fff" stroke="#1e2645" stroke-width="3"/></svg><span>Praha</span></div>`;
-}
 
 async function ochVolej(url, params, ms = 12000, pokus = 1) {
   ms = Math.max(300, Math.min(ms, OCH_KONEC - performance.now()));
@@ -192,7 +184,7 @@ const OCH_ZAMCENE = `
   <tr class="och-zamceno"><th scope="row">Co udělat</th><td><span class="och-znacka zam">V Prověrce</span></td><td>Verdikt jednou větou a úkoly na míru před rezervací, podpisem a převodem.</td></tr>
   <tr class="och-zamceno och-cena"><th scope="row">Cena</th><td><span class="och-znacka zam">V Prověrce PLUS</span></td><td>Odhad ze skutečných prodejů v katastru proti ceně v inzerátu – víte, jestli nepřeplácíte.</td></tr>`;
 
-async function ochutnavka(soKod, cil, { start = performance.now(), obrys: znamy, rodinny = true } = {}) {
+async function ochutnavka(soKod, cil, { start = performance.now(), obrys: znamy, rodinny = true, adresa = "" } = {}) {
   OCH_KONEC = start + 7000;
   cil.innerHTML = `<p class="tlumene">Prověřujeme povodně, hluk, radon, územní plán a okolí…</p>`;
   try {
@@ -211,7 +203,7 @@ async function ochutnavka(soKod, cil, { start = performance.now(), obrys: znamy,
     cil.innerHTML = `<details class="sbal ochutnavka" open>
       <summary><span class="hlavicka-sbal"><h2>Přehled zdarma</h2><span class="shrnuti">prověřujeme…</span></span><span class="prepinac" aria-hidden="true"></span></summary>
       <figure class="och-snimek"><img src="${obr}" alt="Letecký snímek okolí domu" width="700" height="500">
-        <svg viewBox="0 0 700 500" aria-hidden="true">${obrys}</svg>${ochMapkaPrahy(cx, cy)}<figcaption>Letecký snímek ČÚZK, prověřovaný dům bíle.</figcaption></figure>
+        <svg viewBox="0 0 700 500" aria-hidden="true">${obrys}</svg>${window.PRAHA?.mapka ? window.PRAHA.mapka(cx, cy, adresa, "och") : ""}<figcaption>Letecký snímek ČÚZK, prověřovaný dům bíle.</figcaption></figure>
       <table class="och-tabulka"><tbody>
         ${Object.keys(oblasti).map((n) => `<tr class="och-ceka" data-oblast="${esc(n)}"><th scope="row">${esc(n)}</th><td><span class="och-znacka ceka">Prověřujeme</span></td><td><span class="och-nacitani"></span></td></tr>`).join("")}
         ${OCH_ZAMCENE}
