@@ -419,7 +419,7 @@ async function zobrazBudovu(adresa, inz, puvod) {
       <a class="tl obrys-tmave" href="mailto:info@predkoupi.cz?subject=${encodeURIComponent("Prověrka: " + adresa.adresa)}">Napsat nám</a></div></div>`
       : vPraze && window.OBJEDNAVKY?.zapnute ? `<div id="ochutnavka" class="karta och-karta"></div><div class="co-dal" id="objednat"></div>`
       : vPraze ? `<div id="ochutnavka" class="karta och-karta"></div><div class="co-dal"><h3>Co dál</h3>
-      <p>Objednávky Prověrky (790 Kč) a Prověrky PLUS (1 290 Kč) spouštíme v nejbližších týdnech.</p>
+      <p>Objednávky Prověrky (790 Kč) a Prověrky PLUS (1 390 Kč) spouštíme v nejbližších týdnech.</p>
       <div class="akce"><a class="tl tmave-tl" href="/#ceny">Co obsahuje Prověrka</a></div><div class="co-dal-zajem" data-zajem data-zdroj="proverit"></div></div>`
       // Mimo Prahu (W11, 12. 11. 2026): měříme zájem – e-mail a obec, ať víme, kam službu rozšířit.
       : `<div class="co-dal"><h3>Mimo Prahu zatím neprověřujeme</h3>

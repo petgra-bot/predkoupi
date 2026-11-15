@@ -17,7 +17,7 @@
     // Na vlastním počítači jde API přesměrovat parametrem ?api=http://127.0.0.1:8100 (jinde ne).
     // Test (proverka.gratzer.cz) má vlastní testovací server: https://api.predkoupi.cz/test (rozdělení 14. 11. 2026).
     api: predvedeni ? "/predvedeni" : (lokalne && q.get("api")) || (h.startsWith("proverka.") ? "https://api.predkoupi.cz/test" : "https://api.predkoupi.cz"),
-    ceny: { proverka: 790, plus: 1290 },
+    ceny: { proverka: 790, plus: 1390 },
   };
   if (predvedeni) document.write('<script src="/predvedeni/simulace.js?v=2"><\/script>');
 })();
