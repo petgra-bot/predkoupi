@@ -26,7 +26,7 @@ const OCH_AREALY = {
 };
 
 // ---------- dotazy ----------
-// Ochutnávka má na všechno nejvýš 5 s (Petr 13. 11. 2026): dotazy se ukončí v termínu OCH_KONEC.
+// Ochutnávka má na všechno nejvýš 7 s (Petr 13. 11. 2026: 5 s; 15. 11. prodlouženo na 7 s – pomalé služby): dotazy se ukončí v termínu OCH_KONEC.
 let OCH_KONEC = Infinity;
 async function ochVolej(url, params, ms = 12000, pokus = 1) {
   ms = Math.max(300, Math.min(ms, OCH_KONEC - performance.now()));
@@ -184,7 +184,7 @@ const OCH_ZAMCENE = `
   <tr class="och-zamceno och-cena"><th scope="row">Cena</th><td><span class="och-znacka zam">V Prověrce PLUS</span></td><td>Odhad ze skutečných prodejů v katastru proti ceně v inzerátu – víte, jestli nepřeplácíte.</td></tr>`;
 
 async function ochutnavka(soKod, cil, { start = performance.now(), obrys: znamy, rodinny = true } = {}) {
-  OCH_KONEC = start + 5000;
+  OCH_KONEC = start + 7000;
   cil.innerHTML = `<p class="tlumene">Prověřujeme povodně, hluk, radon, územní plán a okolí…</p>`;
   try {
     const dum = znamy || (await ochVolej(`${OCH.RUIAN}/3/query`, { where: `kod=${Number(soKod)}`, outFields: "kod", returnGeometry: true, outSR: 5514 }, 3000)).features?.[0]?.geometry?.rings;

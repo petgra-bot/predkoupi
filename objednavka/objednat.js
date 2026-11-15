@@ -48,8 +48,7 @@
             <label>Číslo bytu (jednotky)<input name="cislo_bytu" type="text" maxlength="20" autocomplete="off" placeholder="např. 1311/146"></label>
             <label class="obj-plocha" hidden>Plocha bytu (m²)<input name="plocha" type="number" inputmode="decimal" min="10" max="500" step="0.1" value="${p(inz?.plocha_m2)}"></label>
           </div>
-          <p class="obj-napoveda obj-cislo-tip">S číslem je report jistě k vašemu bytu. Najdete ho v rezervační smlouvě nebo ve vyúčtování od SVJ.
-            <button type="button" class="obj-odkaz obj-makler">Zkopírovat zprávu pro makléře</button><span class="obj-zkopirovano" role="status"></span></p>
+          <p class="obj-napoveda obj-cislo-tip">Díky číslu bytu prověříme přesně váš byt. Najdete ho v rezervační smlouvě, ve vyúčtování od SVJ, nebo se zeptejte makléře.</p>
           <button type="button" class="obj-odkaz obj-nevim-tl" aria-expanded="false" aria-controls="obj-nevim">Číslo nevím</button>
           <div class="obj-nevim" id="obj-nevim" hidden>
             <p class="obj-napoveda">Byt najdeme podle majitele ve výpisu z katastru, nebo podle plochy a patra. Příjmení použijeme jen k určení bytu a hned ho smažeme.</p>
@@ -99,15 +98,6 @@
       nevimTl.textContent = nevim.hidden ? "Číslo nevím" : "Číslo znám";
       ukazPlochu();
       if (!nevim.hidden) f.prijmeni.focus();
-    });
-    f.querySelector(".obj-makler")?.addEventListener("click", async (e) => {
-      const text = `Dobrý den, zajímám se o byt na adrese ${kratkaAdresa(adresa)}${inz?.url ? ` (${inz.url})` : ""}. `
-        + "Můžete mi prosím poslat číslo bytu (jednotky) podle katastru, např. 1311/146? Chci si byt před rezervací prověřit. Děkuji.";
-      const hlaska = f.querySelector(".obj-zkopirovano");
-      try { await navigator.clipboard.writeText(text); hlaska.textContent = " Zkopírováno – vložte do zprávy makléři."; }
-      catch { window.prompt("Zkopírujte zprávu pro makléře:", text); }
-      setTimeout(() => { hlaska.textContent = ""; }, 4000);
-      e.currentTarget.blur();
     });
     const prepni = () => { plus.hidden = balicek() !== "plus"; tl.textContent = tlText(balicek()); ukazPlochu(); };
     f.querySelectorAll("input[name=balicek]").forEach((r) => r.addEventListener("change", prepni));

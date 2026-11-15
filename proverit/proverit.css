@@ -149,10 +149,9 @@ ul.kandidati button .tlumene { color: var(--slabe-t); }
 .obj-stav input:focus-visible + span { outline: 2px solid var(--navy); outline-offset: 2px; }
 /* Byt po krocích (15. 11. 2026): číslo bytu, „Číslo nevím“ rozbalí příjmení majitele, patro a souhlas */
 .obj-byt { margin: 0 0 6px; }
+.objednat label[hidden], .obj-nevim[hidden] { display: none !important; }
 .obj-odkaz { font: inherit; font-weight: 700; color: var(--navy); background: none; border: 0; padding: 0; min-height: 32px;
   text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
-.obj-cislo-tip .obj-odkaz { display: inline; min-height: 0; }
-.obj-zkopirovano { color: #1d6b3a; font-weight: 600; }
 .obj-nevim-tl { font-size: .92rem; margin: 0 0 8px; }
 .obj-nevim { border-left: 3px solid var(--linka); padding: 4px 0 2px 14px; margin: 0 0 10px; }
 .obj-nevim .obj-souhlas { margin-bottom: 6px; }
@@ -192,7 +191,11 @@ ul.kandidati button .tlumene { color: var(--slabe-t); }
 
 /* Objednávka vpravo na počítači, při posunu zůstává vidět; na mobilu a tabletu plovoucí tlačítko (Petr 14. 11.) */
 @media (min-width: 1080px) {
-  #vysledek:has(> #objednat) { display: grid; grid-template-columns: minmax(0, 1fr) 420px; column-gap: 24px; align-items: start; }
+  /* Na počítači širší stránka a oba sloupce (Petr 15. 11. 2026: úzké, protáhlé texty) */
+  .stranka-proverit main { max-width: 1240px; }
+  .stranka-proverit .zahlavi { max-width: 880px; }
+  .stranka-proverit .hlavicka .obal { max-width: 1240px; }
+  #vysledek:has(> #objednat) { display: grid; grid-template-columns: minmax(0, 1fr) 480px; column-gap: 32px; align-items: start; }
   #vysledek:has(> #objednat) > * { grid-column: 1; }
   #vysledek > #objednat { grid-column: 2; grid-row: 1 / span 9; position: sticky; top: 16px; margin-top: 0;
     max-height: calc(100vh - 32px); overflow-y: auto; overscroll-behavior: contain; }
@@ -204,8 +207,8 @@ a.obj-plovouci, a.obj-plovouci:visited { position: fixed; left: 16px; right: 16p
 .obj-plovouci[hidden] { display: flex; transform: translateY(140%); opacity: 0; pointer-events: none; }
 @media (min-width: 1080px) { .obj-plovouci { display: none !important; } }
 @media (prefers-reduced-motion: reduce) { .obj-plovouci { transition: none; } }
-/* V levém sloupci vedle objednávky je přehled úzký: řádky skládat jako na mobilu (oblast + štítek, pod tím text). */
-@media (min-width: 1080px) {
+/* V levém sloupci vedle objednávky je přehled užší: do 1279 px řádky skládat jako na mobilu (oblast + štítek, pod tím text). */
+@media (min-width: 1080px) and (max-width: 1279px) {
   #vysledek:has(> #objednat) .och-tabulka tr { display: grid; grid-template-columns: auto 1fr; column-gap: 12px; border-top: 1px solid var(--linka-t); padding: 12px 0; }
   #vysledek:has(> #objednat) .och-tabulka th, #vysledek:has(> #objednat) .och-tabulka td { border-top: 0; padding: 0; }
   #vysledek:has(> #objednat) .och-tabulka td:last-child { grid-column: 1 / -1; padding-top: 6px; }
