@@ -182,7 +182,7 @@ function ochutnavkaOblasti(dum, rodinny = true) {
 const OCH_ZAMCENE = `
   <tr class="och-zamceno"><th scope="row">Právní stav</th><td><span class="och-znacka zam">V Prověrce</span></td><td>Věcná břemena, zástavy, exekuce a plomby z výpisu z katastru, insolvence majitele.</td></tr>
   <tr class="och-zamceno"><th scope="row">Co udělat</th><td><span class="och-znacka zam">V Prověrce</span></td><td>Verdikt jednou větou a úkoly na míru před rezervací, podpisem a převodem.</td></tr>
-  <tr class="och-zamceno och-cena"><th scope="row">Cena</th><td><span class="och-znacka zam">V Prověrce PLUS</span></td><td>Odhad ze skutečných prodejů v katastru proti ceně v inzerátu – víte, jestli nepřeplácíte.</td></tr>`;
+  <tr class="och-zamceno och-cena"><th scope="row">Cena</th><td><span class="och-znacka zam">V Prověrce PLUS</span></td><td>Odhad ze skutečných prodejů v domě a okolí (katastr) proti ceně v inzerátu – víte, jestli nepřeplácíte.</td></tr>`;
 
 async function ochutnavka(soKod, cil, { start = performance.now(), obrys: znamy, rodinny = true, adresa = "" } = {}) {
   OCH_KONEC = start + 7000;

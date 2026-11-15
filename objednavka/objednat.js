@@ -41,7 +41,7 @@
             <span class="obj-bal-popis">Právní stav z katastru včetně exekucí, územní plán a stavby v okolí, verdikt a úkoly před koupí. Report do 5 minut.</span></span></label>
           <label class="obj-balicek"><input type="radio" name="balicek" value="plus">
             <span class="obj-bal-text"><span class="obj-bal-nazev"><b>Prověrka PLUS</b><b>${kc(N.ceny.plus)}</b></span>
-            <span class="obj-bal-popis">Navíc odhad ceny ze skutečných prodejů v katastru a srovnání s cenou v inzerátu; podrobný report s mapami. Do 10 minut.</span></span></label>
+            <span class="obj-bal-popis">Navíc odhad ceny ze skutečných prodejů v domě a sousedních domech (katastr, přepočteno na dnešek), srovnání s cenou v inzerátu a tři čísla k vyjednávání; podrobný report s tabulkou prodejů. Do 10 minut.</span></span></label>
         </fieldset>
         ${byt ? `<div class="obj-byt">
           <div class="obj-radek">

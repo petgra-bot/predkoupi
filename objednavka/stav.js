@@ -17,7 +17,7 @@
     fakta: ["Měříme vzdálenost ke stoleté vodě a povodni 2002", "Čteme hlukovou mapu u nejhlučnější fasády", "Kontrolujeme radonový index podloží",
      "Procházíme Metropolitní plán, koridory a uzávěry", "Hledáme dům v dokumentaci EIA", "Mapujeme vedení vysokého napětí a areály v okolí"],
     pravni: ["Hledáme věcná břemena, zástavy, exekuce a plomby", "Ověřujeme vlastníky v insolvenčním rejstříku", "Vyhodnocujeme stavby a záměry v okolí"],
-    cena: ["Stahujeme skutečné prodeje z katastru", "Počítáme cenu za metr čtvereční", "Porovnáváme s požadovanou cenou"],
+    cena: ["Stahujeme skutečné prodeje z katastru", "Hledáme prodeje i v sousedních domech", "Přepočítáváme na dnešní ceny", "Porovnáváme s požadovanou cenou"],
     report: ["Skládáme verdikt a přehled šesti oblastí", "Píšeme úkoly na míru před rezervací, podpisem a převodem", "Vytváříme PDF"],
     kontrola: ["Kontrolujeme čísla proti zdrojům", "Druhá kontrola čte report očima kupujícího"],
   };
@@ -128,14 +128,19 @@
   function cenaKn(c) {
     if (!c) return "";
     const o = c.odhad_pro_byt, v = c.vyjednavani, z = c.zajimavosti || {}, vety = [];
-    if (z.pozice) vety.push(`Požadovaná cena ${z.pozice.pozadovana_kc_m2.toLocaleString("cs-CZ")} Kč/m² je vyšší než u ${z.pozice.drazsi_nez} z ${z.pozice.z} prodejů bytů v domě.`);
+    const kde = c.rozsah === "okoli" ? `v sousedních domech do ${c.okruh_m || 300} m` : "v domě";
+    if (c.vratit_priplatek) return `<div class="rp-cena-kn"><p>V domě ani v sousedních domech do 300 m nebyly za posledních 5 let aspoň 3 prodeje bytů se známou plochou, odhad ceny proto nedáváme. <b>Příplatek za Prověrku PLUS vám vrátíme.</b></p></div>`;
+    if (c.rozsah === "okoli") vety.push(`Odhad vychází z prodejů ${kde} – v samotném domě se za 5 let neprodalo dost bytů.`);
+    if (z.pozice) vety.push(`Požadovaná cena ${z.pozice.pozadovana_kc_m2.toLocaleString("cs-CZ")} Kč/m² je vyšší než u ${z.pozice.drazsi_nez} z ${z.pozice.z} prodejů bytů ${kde} (přepočteno na dnešní ceny).`);
     if (z.posledni_prodej_bytu) vety.push(`Tento byt se naposledy prodal v roce ${z.posledni_prodej_bytu.datum.slice(0, 4)} za ${mil(z.posledni_prodej_bytu.cena_kc)}.`);
-    if (z.stejny_typ) vety.push(`Byty stejné velikosti se v domě prodaly ${z.stejny_typ.pocet}× (medián ${mil(z.stejny_typ.median_kc)}).`);
+    if (z.stejny_typ) vety.push(`Byty stejné velikosti se ${kde} prodaly ${z.stejny_typ.pocet}× (medián dnes cca ${mil(z.stejny_typ.median_kc)}).`);
     return `<div class="rp-cena-kn">
       ${o ? `<p><b>Odhad pro tento byt: ${mil(o.od_kc)} – ${mil(o.do_kc)}</b>, nejspíš ${mil(o.median_kc)} <span class="rp-spol ${esc(o.spolehlivost)}">${esc(SPOL[o.spolehlivost] || "")}</span></p>` : ""}
       ${v ? `<dl class="rp-vyjednavani"><div><dt>Dobrá koupě</dt><dd>do ${mil(v.dobra_koupe_kc)}</dd></div><div><dt>Férová cena</dt><dd>${mil(v.ferova_cena_kc)}</dd></div><div><dt>Horní hranice</dt><dd>${mil(v.horni_hranice_kc)}</dd></div></dl>` : ""}
       ${vety.length ? `<p>${vety.map(esc).join(" ")}</p>` : ""}
-      ${c.graf_svg ? `<figure class="rp-graf">${c.graf_svg}<figcaption>Skutečné prodeje bytů v domě (katastr), cena za m²; oranžově požadovaná cena.</figcaption></figure>` : ""}
+      ${c.graf_svg ? `<figure class="rp-graf">${c.graf_svg}<figcaption>Skutečné prodeje bytů ${c.rozsah === "okoli" ? `v sousedních domech do ${c.okruh_m || 300} m` : "v domě"} (katastr), cena za m²; oranžově požadovaná cena.</figcaption></figure>` : ""}
+      ${c.preceneni ? `<p class="rp-nap">${esc(c.preceneni.popis)}</p>` : ""}
+      <p class="rp-nap"><a href="#report-pdf">Tabulka všech prodejů s cenou, plochou a cenou za m² je v podrobném reportu (PDF) ↓</a></p>
     </div>`;
   }
 
@@ -185,7 +190,7 @@
           <div><dt>${o.typ === "byt" ? "Prodeje v domě" : "Prodeje v okolí"}</dt><dd>${esc(k.cena.trh)}</dd></div><div><dt>Rozdíl</dt><dd>${esc(k.cena.odchylka)}</dd></div></dl>
           <p>${esc(k.cena.text)}</p>${cenaKn(k.cena_kn)}</div>`
           : `<div class="rp-plus"><h2>Odhad ceny <span class="rp-odznak zamceno">V Prověrce PLUS</span></h2>
-            <p><b>Nepřeplácíte?</b> Odhad ceny ze skutečných prodejů v katastru a srovnání s cenou v inzerátu je v Prověrce PLUS. Rizika už máme, doplníme jen cenu za 500 Kč –
+            <p><b>Nepřeplácíte?</b> Odhad ceny ze skutečných prodejů v domě a sousedních domech (katastr) a srovnání s cenou v inzerátu je v Prověrce PLUS. Rizika už máme, doplníme jen cenu za 500 Kč –
             <a href="mailto:info@predkoupi.cz?subject=${encodeURIComponent("Doplnit odhad ceny, objednávka " + o.cislo)}">napište nám</a>.</p></div>`}
         ${doplnitHtml(o)}
         <section><h2>Přehled</h2><ul class="rp-prehled">${(k.semafor || []).map((s) => `<li class="${esc(s.barva)}">
@@ -201,7 +206,7 @@
           `<li class="${esc(z.barva)}"><b>${esc(z.titulek)}</b> ${esc(z.text)}</li>`).join("")}</ul></section>` : ""}
         ${(k.nezjisteno || []).length ? `<details class="rp-sbal"><summary>Co jsme nezjistili (${k.nezjisteno.length})</summary><ul>${k.nezjisteno.map((x) => `<li>${esc(x)}</li>`).join("")}</ul></details>` : ""}
         ${(k.zdroje || []).length ? `<details class="rp-sbal"><summary>Z čeho vycházíme</summary><ul>${k.zdroje.map((x) => `<li>${esc(x)}</li>`).join("")}</ul></details>` : ""}
-        <section class="rp-stahnout"><h2>Report v PDF</h2><div class="rp-lista">${pdfOdkazy(o)}</div>
+        <section class="rp-stahnout" id="report-pdf"><h2>Report v PDF</h2><div class="rp-lista">${pdfOdkazy(o)}</div>
           <p class="rp-nap">Stejný report jsme poslali i e-mailem.</p></section>
         <p class="rp-upozorneni">${esc(k.upozorneni || "Report není právní ani znalecký posudek.")}</p>
         ${N.predvedeni ? `<p class="rp-predvedeni">Toto byla ukázka. <a href="/predvedeni/">Spustit znovu</a></p>` : ""}
