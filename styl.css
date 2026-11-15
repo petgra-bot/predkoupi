@@ -277,4 +277,4 @@ h2.h3 { font-size: 0.9375rem; font-weight: 700; letter-spacing: .02em; line-heig
 .cena-ukazka { margin: 0; background: var(--bila); border: 1px solid var(--linka); padding: 20px 22px 18px; }
 .cena-ukazka svg { display: block; width: 100%; height: auto; max-width: 860px; }
 .cena-ukazka figcaption { margin-top: 10px; font-size: 0.875rem; color: var(--tlumene); max-width: 75ch; }
-.platby-loga { display: block; margin-top: 6px; }
+.platby-loga { display: block; margin-top: 14px; height: 28px; width: auto; max-width: 100%; }
