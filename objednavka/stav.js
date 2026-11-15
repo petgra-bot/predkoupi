@@ -168,11 +168,12 @@
         </div>
         ${k.cena ? `<div class="rp-cena ${esc(k.cena.barva)}"><h2>Odhad ceny <span class="rp-odznak">Prověrka PLUS</span></h2>
           <dl><div><dt>${esc(k.cena.popisek || "Požadovaná cena")}</dt><dd>${esc(k.cena.pozadovana)}</dd></div>
-          <div><dt>Trh v okolí</dt><dd>${esc(k.cena.trh)}</dd></div><div><dt>Rozdíl</dt><dd>${esc(k.cena.odchylka)}</dd></div></dl>
+          <div><dt>${o.typ === "byt" ? "Prodeje v domě" : "Prodeje v okolí"}</dt><dd>${esc(k.cena.trh)}</dd></div><div><dt>Rozdíl</dt><dd>${esc(k.cena.odchylka)}</dd></div></dl>
           <p>${esc(k.cena.text)}</p></div>`
           : `<div class="rp-plus"><h2>Odhad ceny <span class="rp-odznak zamceno">V Prověrce PLUS</span></h2>
             <p><b>Nepřeplácíte?</b> Odhad ceny ze skutečných prodejů v katastru a srovnání s cenou v inzerátu je v Prověrce PLUS. Rizika už máme, doplníme jen cenu za 500 Kč –
             <a href="mailto:info@predkoupi.cz?subject=${encodeURIComponent("Doplnit odhad ceny, objednávka " + o.cislo)}">napište nám</a>.</p></div>`}
+        ${doplnitHtml(o)}
         <section><h2>Přehled</h2><ul class="rp-prehled">${(k.semafor || []).map((s) => `<li class="${esc(s.barva)}">
           <span class="rp-oblast">${esc(s.oblast)}</span>${stitek(s.barva)}<span class="rp-text">${esc(s.text)}</span></li>`).join("")}</ul></section>
         ${(k.hlavni_zjisteni || []).length ? `<section><h2>Hlavní zjištění</h2>${k.hlavni_zjisteni.map((z) => `
@@ -192,6 +193,7 @@
         ${N.predvedeni ? `<p class="rp-predvedeni">Toto byla ukázka. <a href="/predvedeni/">Spustit znovu</a></p>` : ""}
       </article>`;
     $("objednavka").querySelector(".rp")?.classList.add("rp-objev");
+    napojDoplneni(o);
     $("objednavka").querySelectorAll("input[data-u]").forEach((c) => c.addEventListener("change", () => {
       ulozene[c.dataset.u] = c.checked;
       try { localStorage.setItem(`predkoupi-ukoly-${token}`, JSON.stringify(ulozene)); } catch { /* bez úložiště */ }
@@ -215,40 +217,37 @@
       ceka_na_platbu: () => karta("upresnit", "Čekáme na potvrzení platby", `<p class="tlumene">Jakmile platební brána platbu potvrdí, prověrka se spustí sama. Obvykle to trvá pár vteřin.</p>`),
       zruseno: () => karta("chyba", "Platba nebyla dokončena", `<p class="tlumene">Nic jsme nestrhli. Objednávku můžete zopakovat.</p><p><a href="/proverit/?q=${encodeURIComponent(o.adresa)}">Zpět k nemovitosti</a></p>`),
       zkusebni: () => karta("ok", "Zkušební platba proběhla", `<p class="tlumene">Platby spouštíme v nejbližších dnech. Ve zkušebním provozu se prověrka nespouští a nic se neplatí.</p>`),
-      potrebuje_klienta: () => (o.kandidati || []).length
-        ? karta("upresnit", "Který z těchto bytů?", `<p class="tlumene">Podle plochy odpovídá v domě víc bytů. Vyberte ten správný, report pak dokončíme do pár minut.</p>
-        <ul class="kandidati">${o.kandidati.map((k) => `<li><button type="button" data-byt="${esc(k.cislo)}">Byt č. ${esc(k.cislo)}${k.plocha_m2 ? ` <span class="tlumene">· podle podílu cca ${esc(k.plocha_m2)} m²</span>` : ""}${k.patro_odhad != null ? ` <span class="tlumene">· podle pořadí asi ${k.patro_odhad ? esc(k.patro_odhad) + ". patro" : "přízemí"}</span>` : ""}</button></li>`).join("")}</ul>
-        <p class="tlumene">Číslo bytu najdete v kupní nebo rezervační smlouvě, případně se zeptejte makléře.</p>
-        <p><button type="button" class="tl obrys" data-byt="zadny">Můj byt mezi nimi není</button></p>`)
-        // Výpis domu bez podílů (test 8): plochu nejde spárovat, klient zadá číslo bytu sám.
-        : karta("upresnit", "Které číslo má váš byt?", `<p class="tlumene">V domě je hodně bytů a podle plochy jsme ten váš nedokázali jednoznačně určit.
-          Zadejte číslo bytu (jednotky) ve tvaru <b>1311/146</b>, report pak dokončíme do pár minut.</p>
-        ${o.napoveda ? `<p class="tlumene"><b>${esc(o.napoveda)}</b></p>` : ""}
-        <form class="cislo-bytu"><label>Číslo bytu<input name="cislo" autocomplete="off" autocapitalize="none" placeholder="např. 1311/146" required pattern="\\d{1,5}/\\d{1,4}"></label>
-          <button type="submit" class="tl">Pokračovat</button></form>
-        <p class="tlumene">Najdete ho v rezervační nebo kupní smlouvě, ve vyúčtování od SVJ, případně se zeptejte makléře nebo prodávajícího.</p>
-        <p><button type="button" class="tl obrys" data-byt="zadny">Číslo nemám – vyřiďte to ručně</button></p>`),
       chyba: () => karta("chyba", "Report řešíme ručně", `<p class="tlumene">Při vytváření se objevil problém. Ozveme se e-mailem nejpozději do 24 hodin; když report nedodáme, peníze vám vrátíme.</p>`),
     }[o.stav];
     $("objednavka").innerHTML = obsah ? obsah() : karta("chyba", "Neznámý stav", "");
-    $("objednavka").querySelector("form.cislo-bytu")?.addEventListener("submit", (e) => {
-      e.preventDefault();
-      const c = e.target.cislo.value.trim().replace(/\s+/g, "");
-      if (!/^\d{1,5}\/\d{1,4}$/.test(c)) { e.target.cislo.setCustomValidity("Číslo bytu má tvar 1311/146."); e.target.cislo.reportValidity(); e.target.cislo.setCustomValidity(""); return; }
-      vyberByt(c);
-    });
-    $("objednavka").querySelectorAll("button[data-byt]").forEach((b) => b.addEventListener("click", () => {
-      if (b.dataset.byt === "zadny" && !confirm("Váš byt dohledáme ručně a ozveme se e-mailem do 24 hodin. Pokračovat?")) return;
-      vyberByt(b.dataset.byt);
-    }));
   }
 
-  async function vyberByt(cislo) {
-    try {
-      const r = await fetch(`${N.api}/objednavka/${encodeURIComponent(token)}/byt`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ cislo }) });
-      if (!r.ok) throw new Error();
-      nacti();
-    } catch { alert("Výběr se nepodařilo uložit. Zkuste to prosím znovu."); }
+  // Report bez konkrétního bytu (Petr 15. 11. 2026): číslo bytu jde do 30 dnů jednou zdarma doplnit.
+  const doplnitHtml = (o) => o.doplnit ? `<section class="rp-doplnit"><h2>Zjistili jste číslo bytu?</h2>
+      <p>Váš byt se nám v domě nepodařilo určit${o.doplnit.duvod ? ` (${esc(o.doplnit.duvod)})` : ""}, proto report prověřuje dům a okolí
+      bez právního stavu konkrétního bytu. Doplňte číslo do <b>${esc(o.doplnit.do)}</b> zdarma – doplníme výpis bytu, prověření vlastníků
+      a právní stav a pošleme nový report.</p>
+      <form class="cislo-bytu"><label>Číslo bytu (jednotky)<input name="cislo" autocomplete="off" autocapitalize="none" placeholder="např. 1311/146"></label>
+        <button type="submit" class="tl tmave-tl">Doplnit byt</button></form>
+      <p class="rp-nap">Najdete ho v rezervační smlouvě, ve vyúčtování od SVJ, nebo se zeptejte makléře. Doplnit jde jednou.</p>
+      <p class="rp-doplnit-zprava" role="alert"></p></section>` : "";
+
+  function napojDoplneni(o) {
+    const f = $("objednavka").querySelector("form.cislo-bytu");
+    f?.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const c = f.cislo.value.trim().replace(/\s+/g, ""), zpr = $("objednavka").querySelector(".rp-doplnit-zprava");
+      if (!/^\d{1,5}\/\d{1,4}$/.test(c)) { zpr.textContent = "Číslo bytu má tvar 1311/146 (číslo domu, lomítko, číslo bytu)."; f.cislo.focus(); return; }
+      if (!confirm(`Doplnit byt č. ${c}? Doplnit jde jen jednou.`)) return;
+      f.querySelector("button").disabled = true;
+      try {
+        const r = await fetch(`${N.api}/objednavka/${encodeURIComponent(token)}/doplnit`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ cislo: c }) });
+        const d = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(typeof d.detail === "string" ? d.detail : "Doplnění se nepodařilo.");
+        document.body.classList.remove("bily-report");
+        posledniStav = null; nacti();
+      } catch (err) { zpr.textContent = `${err.message} Zkuste to znovu, nebo napište na info@predkoupi.cz.`; f.querySelector("button").disabled = false; }
+    });
   }
 
   async function nacti() {

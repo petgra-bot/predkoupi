@@ -170,3 +170,11 @@ body.bily-report .hlavicka { background: var(--navy); }
 .pr-praha-pulz { transform-box: fill-box; transform-origin: center; }
 @media (prefers-reduced-motion: no-preference) { .pr-praha-pulz { animation: pr-praha-pulz 1.8s ease-out infinite; } }
 @keyframes pr-praha-pulz { from { opacity: .8; transform: scale(1); } to { opacity: 0; transform: scale(3); } }
+
+/* Doplnění čísla bytu k reportu bez konkrétního bytu (15. 11. 2026) – bílý report */
+.rp-doplnit { border: 1px solid var(--navy, #1e2645); border-left-width: 4px; padding: 18px 20px; margin: 0 0 28px; background: #fff; }
+.rp-doplnit h2 { margin-top: 0; }
+.rp-doplnit .cislo-bytu input { border-color: #b8bdcc; color: var(--navy, #1e2645); background: #fff; }
+.rp-doplnit .cislo-bytu input:focus-visible { outline-color: var(--navy, #1e2645); }
+.rp-doplnit-zprava { color: #b3261e; font-weight: 600; }
+.rp-doplnit-zprava:empty { display: none; }

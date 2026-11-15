@@ -43,18 +43,29 @@
             <span class="obj-bal-text"><span class="obj-bal-nazev"><b>Prověrka PLUS</b><b>${kc(N.ceny.plus)}</b></span>
             <span class="obj-bal-popis">Navíc odhad ceny ze skutečných prodejů v katastru a srovnání s cenou v inzerátu; podrobný report s mapami. Do 10 minut.</span></span></label>
         </fieldset>
-        ${byt ? `<div class="obj-radek">
-          <label>Plocha bytu (m²)<input name="plocha" type="number" inputmode="decimal" min="10" max="500" step="0.1" value="${p(inz?.plocha_m2)}"></label>
-          <label>Číslo bytu (jednotky), pokud ho znáte<input name="cislo_bytu" type="text" maxlength="20" autocomplete="off" placeholder="např. 1311/146"></label>
-        </div>
-        <p class="obj-napoveda obj-cislo-tip"><b>S číslem bytu je report jistě k vašemu bytu.</b> Najdete ho v rezervační smlouvě, ve vyúčtování od SVJ, nebo se zeptejte makléře.
-          Bez něj byt najdeme podle plochy; když bude odpovídat víc bytů, po zaplacení vám je ukážeme na výběr.</p>` : ""}
+        ${byt ? `<div class="obj-byt">
+          <div class="obj-radek">
+            <label>Číslo bytu (jednotky)<input name="cislo_bytu" type="text" maxlength="20" autocomplete="off" placeholder="např. 1311/146"></label>
+            <label class="obj-plocha" hidden>Plocha bytu (m²)<input name="plocha" type="number" inputmode="decimal" min="10" max="500" step="0.1" value="${p(inz?.plocha_m2)}"></label>
+          </div>
+          <p class="obj-napoveda obj-cislo-tip">S číslem je report jistě k vašemu bytu. Najdete ho v rezervační smlouvě nebo ve vyúčtování od SVJ.
+            <button type="button" class="obj-odkaz obj-makler">Zkopírovat zprávu pro makléře</button><span class="obj-zkopirovano" role="status"></span></p>
+          <button type="button" class="obj-odkaz obj-nevim-tl" aria-expanded="false" aria-controls="obj-nevim">Číslo nevím</button>
+          <div class="obj-nevim" id="obj-nevim" hidden>
+            <p class="obj-napoveda">Byt najdeme podle majitele ve výpisu z katastru, nebo podle plochy a patra. Příjmení použijeme jen k určení bytu a hned ho smažeme.</p>
+            <div class="obj-radek">
+              <label>Příjmení majitele (prodávajícího)<input name="prijmeni" type="text" maxlength="60" autocomplete="off" placeholder="z inzerátu nebo od makléře"></label>
+              <label>Patro<input name="patro" type="text" maxlength="10" value="${p(inz?.patro)}"></label>
+            </div>
+            <label class="obj-souhlas obj-bez-bytu"><input type="checkbox" name="bez_bytu">
+              <span>Když byt nepůjde určit, prověřte dům a okolí i bez něj. Číslo bytu pak můžu doplnit do 30 dnů zdarma.</span></label>
+          </div>
+        </div>` : ""}
         <div class="obj-plus" hidden>
           <p class="obj-napoveda">${inz ? "Co víme z inzerátu, je předvyplněné; doplňte zbytek." : "Pro odhad ceny opište z inzerátu cenu, plochu a stav."}</p>
           <div class="obj-radek">
             <label>Požadovaná cena (Kč)<input name="cena" type="text" inputmode="numeric" autocomplete="off" value="${inz?.cena_kc ? p(Number(inz.cena_kc).toLocaleString("cs-CZ")) : ""}" placeholder="např. 8 900 000"></label>
-            ${byt ? `<label>Patro, pokud ho znáte<input name="patro" type="text" maxlength="10" value="${p(inz?.patro)}"></label>`
-                  : `<label>Užitná plocha domu (m²)<input name="plocha_dum" type="number" inputmode="decimal" min="20" max="2000" value="${p(inz?.plocha_m2)}"></label>`}
+            ${byt ? "" : `<label>Užitná plocha domu (m²)<input name="plocha_dum" type="number" inputmode="decimal" min="20" max="2000" value="${p(inz?.plocha_m2)}"></label>`}
           </div>
           <fieldset class="obj-stav"><legend>Stav</legend>
             ${STAVY.map(([v, t]) => `<label><input type="radio" name="stav" value="${v}"><span>${t}</span></label>`).join("")}
@@ -77,7 +88,28 @@
     const tl = f.querySelector(".obj-zaplatit"), zprava = f.querySelector(".obj-stav-zprava"), souhrn = f.querySelector(".obj-souhrn");
     const plus = f.querySelector(".obj-plus"), navrh = f.querySelector(".obj-navrh");
     const balicek = () => f.balicek.value;
-    const prepni = () => { plus.hidden = balicek() !== "plus"; tl.textContent = tlText(balicek()); };
+    // Byt po krocích (Petr 15. 11. 2026): číslo bytu; „Číslo nevím“ rozbalí příjmení majitele, patro a souhlas s prověrkou
+    // bez konkrétního bytu. Plocha je vidět v PLUS (odhad ceny) a při „Číslo nevím“ (hledání podle plochy).
+    const nevimTl = f.querySelector(".obj-nevim-tl"), nevim = f.querySelector(".obj-nevim"), plochaBytu = f.querySelector(".obj-plocha");
+    const nevimOtevreno = () => nevim && !nevim.hidden;
+    const ukazPlochu = () => { if (plochaBytu) plochaBytu.hidden = !(balicek() === "plus" || nevimOtevreno()); };
+    nevimTl?.addEventListener("click", () => {
+      nevim.hidden = !nevim.hidden;
+      nevimTl.setAttribute("aria-expanded", String(!nevim.hidden));
+      nevimTl.textContent = nevim.hidden ? "Číslo nevím" : "Číslo znám";
+      ukazPlochu();
+      if (!nevim.hidden) f.prijmeni.focus();
+    });
+    f.querySelector(".obj-makler")?.addEventListener("click", async (e) => {
+      const text = `Dobrý den, zajímám se o byt na adrese ${kratkaAdresa(adresa)}${inz?.url ? ` (${inz.url})` : ""}. `
+        + "Můžete mi prosím poslat číslo bytu (jednotky) podle katastru, např. 1311/146? Chci si byt před rezervací prověřit. Děkuji.";
+      const hlaska = f.querySelector(".obj-zkopirovano");
+      try { await navigator.clipboard.writeText(text); hlaska.textContent = " Zkopírováno – vložte do zprávy makléři."; }
+      catch { window.prompt("Zkopírujte zprávu pro makléře:", text); }
+      setTimeout(() => { hlaska.textContent = ""; }, 4000);
+      e.currentTarget.blur();
+    });
+    const prepni = () => { plus.hidden = balicek() !== "plus"; tl.textContent = tlText(balicek()); ukazPlochu(); };
     f.querySelectorAll("input[name=balicek]").forEach((r) => r.addEventListener("change", prepni));
     // Cena se při psaní formátuje po tisících: 214 414 156 (Petr 13. 11. 2026).
     const cenaPole = f.cena, cislo = (s) => Number(String(s).replace(/\D/g, "")) || 0;
@@ -114,7 +146,7 @@
     const pocetText = (n) => n === 1 ? "Doplňte prosím 1 údaj – je označený červeně." : `Doplňte prosím ${n} údaje – jsou označené červeně.`;
     const prepocti = () => { const n = f.querySelectorAll(".obj-chybne").length; souhrn.textContent = n ? pocetText(n) : ""; };
     f.addEventListener("input", (e) => { if (e.target.name && e.target.name !== "balicek") { vycisti(e.target); prepocti(); } });
-    f.addEventListener("change", (e) => { if (e.target.name === "stav" || e.target.name === "souhlas") { vycisti(e.target); prepocti(); } });
+    f.addEventListener("change", (e) => { if (["stav", "souhlas", "bez_bytu"].includes(e.target.name)) { vycisti(e.target); prepocti(); } });
 
     const kontrola = () => {
       const ch = [];
@@ -122,8 +154,13 @@
       if (byt) {
         const pl = v(f.plocha.value), cb = f.cislo_bytu.value.trim().replace(/\s+/g, "");
         if (cb && !/^\d{1,5}\/\d{1,4}$/.test(cb)) ch.push([f.cislo_bytu, "Číslo bytu má tvar 1311/146 (číslo domu, lomítko, číslo bytu)."]);
-        if (!f.cislo_bytu.value.trim() && !(pl > 0)) ch.push([f.plocha, "Doplňte plochu bytu z inzerátu (nebo číslo bytu)."]);
-        else if (f.plocha.value && (pl < 10 || pl > 500)) ch.push([f.plocha, "Plocha bytu má být 10–500 m²."]);
+        if (!cb && !nevimOtevreno()) ch.push([f.cislo_bytu, "Doplňte číslo bytu, nebo klikněte na „Číslo nevím“."]);
+        if (!cb && nevimOtevreno()) {
+          if (!f.prijmeni.value.trim() && !(pl > 0)) ch.push([f.prijmeni, "Doplňte příjmení majitele, nebo plochu bytu – podle nich byt najdeme."]);
+          if (!f.bez_bytu.checked) ch.push([f.bez_bytu, "Potvrďte, že když byt nepůjde určit, prověříme dům a okolí bez něj."]);
+        }
+        if ((balicek() === "plus" || nevimOtevreno()) && f.plocha.value && (pl < 10 || pl > 500)) ch.push([f.plocha, "Plocha bytu má být 10–500 m²."]);
+        if (balicek() === "plus" && !(pl > 0)) ch.push([f.plocha, "Doplňte plochu bytu – bez ní cenu neodhadneme."]);
       }
       if (balicek() === "plus") {   // v PLUS povinné: cena, plocha a stav (Petr 13. 11. 2026)
         if (cislo(f.cena.value) < 100000) ch.push([f.cena, "Doplňte požadovanou cenu z inzerátu – bez ní cenu neporovnáme."]);
@@ -156,10 +193,13 @@
       const data = {
         balicek: balicek(), email: f.email.value.trim(), adresa, typ: byt ? "byt" : "dum", souhlas: true, web: f.web.value || null,
         inzerat: inz?.url || null,
-        plocha: byt ? Number(String(f.plocha.value).replace(",", ".")) || null : (balicek() === "plus" ? Number(f.plocha_dum?.value) || null : null),
+        plocha: byt ? (balicek() === "plus" || nevimOtevreno() ? Number(String(f.plocha.value).replace(",", ".")) || null : null)
+          : (balicek() === "plus" ? Number(f.plocha_dum?.value) || null : null),
         cislo_bytu: byt ? f.cislo_bytu.value.trim().replace(/\s+/g, "") || null : null,
+        prijmeni: byt && nevimOtevreno() && !f.cislo_bytu.value.trim() ? f.prijmeni.value.trim() || null : null,
+        bez_bytu: byt && nevimOtevreno() && f.bez_bytu.checked,
         cena: balicek() === "plus" ? cislo(f.cena.value) || null : null,
-        patro: balicek() === "plus" && byt ? f.patro.value.trim() || null : null,
+        patro: byt && nevimOtevreno() ? f.patro.value.trim() || null : null,
         stav: balicek() === "plus" ? f.stav.value : null,
         // Obrys domu z přehledu zdarma: server ho vrátí stránce průběhu (snímek a mapka Prahy i z odkazu v e-mailu).
         obrys: (() => { try { return JSON.parse(document.getElementById("ochutnavka")?.dataset.obrys || "null"); } catch { return null; } })(),
