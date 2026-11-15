@@ -125,6 +125,23 @@
                  "pred-drazbou": "Před dražbou", "po-priklepu": "Po příklepu" };
   const stitek = (b) => `<span class="rp-stitek ${esc(b)}">${esc(BARVY[b] || b)}</span>`;
 
+  // Cena z katastru (Petr 15. 11. 2026): odhad se spolehlivostí, 3 čísla k vyjednávání, zajímavosti a graf (data serveru).
+  const mil = (n) => `${(n / 1e6).toLocaleString("cs-CZ", { maximumFractionDigits: 2 })} mil. Kč`;
+  const SPOL = { vysoka: "vysoká spolehlivost", stredni: "střední spolehlivost", nizka: "nízká spolehlivost – málo prodejů" };
+  function cenaKn(c) {
+    if (!c) return "";
+    const o = c.odhad_pro_byt, v = c.vyjednavani, z = c.zajimavosti || {}, vety = [];
+    if (z.pozice) vety.push(`Požadovaná cena ${z.pozice.pozadovana_kc_m2.toLocaleString("cs-CZ")} Kč/m² je vyšší než u ${z.pozice.drazsi_nez} z ${z.pozice.z} prodejů bytů v domě.`);
+    if (z.posledni_prodej_bytu) vety.push(`Tento byt se naposledy prodal v roce ${z.posledni_prodej_bytu.datum.slice(0, 4)} za ${mil(z.posledni_prodej_bytu.cena_kc)}.`);
+    if (z.stejny_typ) vety.push(`Byty stejné velikosti se v domě prodaly ${z.stejny_typ.pocet}× (medián ${mil(z.stejny_typ.median_kc)}).`);
+    return `<div class="rp-cena-kn">
+      ${o ? `<p><b>Odhad pro tento byt: ${mil(o.od_kc)} – ${mil(o.do_kc)}</b>, nejspíš ${mil(o.median_kc)} <span class="rp-spol ${esc(o.spolehlivost)}">${esc(SPOL[o.spolehlivost] || "")}</span></p>` : ""}
+      ${v ? `<dl class="rp-vyjednavani"><div><dt>Dobrá koupě</dt><dd>do ${mil(v.dobra_koupe_kc)}</dd></div><div><dt>Férová cena</dt><dd>${mil(v.ferova_cena_kc)}</dd></div><div><dt>Horní hranice</dt><dd>${mil(v.horni_hranice_kc)}</dd></div></dl>` : ""}
+      ${vety.length ? `<p>${vety.map(esc).join(" ")}</p>` : ""}
+      ${c.graf_svg ? `<figure class="rp-graf">${c.graf_svg}<figcaption>Skutečné prodeje bytů v domě (katastr), cena za m²; oranžově požadovaná cena.</figcaption></figure>` : ""}
+    </div>`;
+  }
+
   async function vysledek(o) {
     clearInterval(ticker);
     // Krátká chvíle „Hotovo“ na konci průběhu (hodnocení 13. 11.): 100 %, odškrtnuté kroky, pak report.
@@ -169,7 +186,7 @@
         ${k.cena ? `<div class="rp-cena ${esc(k.cena.barva)}"><h2>Odhad ceny <span class="rp-odznak">Prověrka PLUS</span></h2>
           <dl><div><dt>${esc(k.cena.popisek || "Požadovaná cena")}</dt><dd>${esc(k.cena.pozadovana)}</dd></div>
           <div><dt>${o.typ === "byt" ? "Prodeje v domě" : "Prodeje v okolí"}</dt><dd>${esc(k.cena.trh)}</dd></div><div><dt>Rozdíl</dt><dd>${esc(k.cena.odchylka)}</dd></div></dl>
-          <p>${esc(k.cena.text)}</p></div>`
+          <p>${esc(k.cena.text)}</p>${cenaKn(k.cena_kn)}</div>`
           : `<div class="rp-plus"><h2>Odhad ceny <span class="rp-odznak zamceno">V Prověrce PLUS</span></h2>
             <p><b>Nepřeplácíte?</b> Odhad ceny ze skutečných prodejů v katastru a srovnání s cenou v inzerátu je v Prověrce PLUS. Rizika už máme, doplníme jen cenu za 500 Kč –
             <a href="mailto:info@predkoupi.cz?subject=${encodeURIComponent("Doplnit odhad ceny, objednávka " + o.cislo)}">napište nám</a>.</p></div>`}

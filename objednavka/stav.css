@@ -178,3 +178,15 @@ body.bily-report .hlavicka { background: var(--navy); }
 .rp-doplnit .cislo-bytu input:focus-visible { outline-color: var(--navy, #1e2645); }
 .rp-doplnit-zprava { color: #b3261e; font-weight: 600; }
 .rp-doplnit-zprava:empty { display: none; }
+
+/* Cena z katastru ve webovém reportu (15. 11. 2026) */
+.rp-cena-kn { margin-top: 14px; padding-top: 12px; border-top: 1px solid #d9dce5; }
+.rp-spol { font-size: .74rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #5a6078; white-space: nowrap; }
+.rp-spol.nizka { color: #b35f00; }
+.rp-vyjednavani { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; margin: 10px 0; }
+.rp-vyjednavani div { border: 1px solid #d9dce5; padding: 8px 12px; }
+.rp-vyjednavani dt { font-size: .74rem; text-transform: uppercase; letter-spacing: .05em; color: #5a6078; }
+.rp-vyjednavani dd { margin: 2px 0 0; font-weight: 700; }
+.rp-graf { margin: 10px 0 0; }
+.rp-graf svg { width: 100%; height: auto; display: block; }
+.rp-graf figcaption { font-size: .8rem; color: #5a6078; }
