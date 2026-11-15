@@ -222,3 +222,17 @@ a.obj-plovouci, a.obj-plovouci:visited { position: fixed; left: 16px; right: 16p
   #vysledek:has(> #objednat) .och-tabulka td:last-child { grid-column: 1 / -1; padding-top: 6px; }
   #vysledek:has(> #objednat) .och-tabulka th { min-width: 110px; }
 }
+
+/* Co obsahuje balíček (W12, varianta B, 15. 11. 2026) */
+.obj-rozbal-tl { font: 600 .84rem "Montserrat", sans-serif; color: var(--navy); background: none; border: 0; padding: 6px 0 2px; min-height: 32px;
+  cursor: pointer; text-decoration: underline; text-underline-offset: 3px; display: inline-flex; gap: 6px; align-items: center; }
+.obj-rozbal-tl::after { content: ""; width: 7px; height: 7px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor;
+  transform: rotate(45deg) translateY(-2px); transition: transform .2s; }
+.obj-rozbal-tl[aria-expanded="true"]::after { transform: rotate(-135deg) translateY(-1px); }
+.obj-rozbal-tl:focus-visible { outline: 2px solid var(--navy); outline-offset: 2px; }
+.obj-rozbal { display: block; font-size: .86rem; color: #3a4060; font-weight: 400; }
+.obj-rozbal[hidden] { display: none; }
+.obj-rozbal ul { margin: 4px 0 0; padding: 0 0 0 18px; }
+.obj-rozbal li { margin: 3px 0; line-height: 1.45; }
+.obj-rozbal li::marker { color: #2a9d8f; }
+@media (prefers-reduced-motion: reduce) { .obj-rozbal-tl::after { transition: none; } }

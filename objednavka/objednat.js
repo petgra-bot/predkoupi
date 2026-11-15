@@ -25,6 +25,28 @@
     return nej && nej[1] > 0 && nej[1] <= 2 ? `${jmeno}@${nej[0]}` : null;
   };
 
+  // Co obsahuje balíček (W12, Petr 15. 11. 2026 vybral variantu B): „Co přesně dostanu“ rozbalí seznam přímo v kartě.
+  const OBSAH = {
+    proverka: ["<b>Aktuální výpis z katastru</b> – zástavy, břemena, exekuce, plomby, předkupní práva",
+               "<b>Prověření vlastníků</b> v insolvenčním rejstříku",
+               "<b>Územní plán a stavby v okolí</b> – Metropolitní plán, záměry, EIA, uzávěry",
+               "<b>Povodně, radon a hluk</b> u nejhlučnější fasády ve dne i v noci",
+               "Vlastník pozemku pod domem, elektrická vedení, nežádoucí zařízení",
+               "<b>Verdikt a úkoly před koupí na míru</b> – co ověřit, s kým a kdy",
+               "Report v PDF i v prohlížeči <b>do 5 minut</b>"],
+    plus: ["Vše z Prověrky",
+           "<b>Odhad ceny ze skutečných prodejů</b> v domě i v sousedních domech do 300 m (katastr), přepočtený na dnešní ceny",
+           "<b>Tři čísla k vyjednávání</b> – dobrá koupě, férová cena, horní hranice – a graf cen",
+           "<b>Prověření vlastníků v evidenci exekucí</b>",
+           "<b>Podrobný report</b> – tabulka prodejů, mapy povodní a hluku, všechna zjištění se zdroji, daň z nemovitosti",
+           "Report <b>do 10 minut</b>"],
+  };
+  const kartaBalicku = (v, nazev, cena, popis, vybrany) => `<label class="obj-balicek"><input type="radio" name="balicek" value="${v}"${vybrany ? " checked" : ""}>
+            <span class="obj-bal-text"><span class="obj-bal-nazev"><b>${nazev}</b><b>${kc(cena)}</b></span>
+            <span class="obj-bal-popis">${popis}</span>
+            <button type="button" class="obj-rozbal-tl" aria-expanded="false" aria-controls="obj-obsah-${v}">Co přesně dostanu</button>
+            <span class="obj-rozbal" id="obj-obsah-${v}" hidden><ul>${OBSAH[v].map((x) => `<li>${x}</li>`).join("")}</ul></span></span></label>`;
+
   window.objednavkaFormular = (kontejner, { adresa, typ, inz }) => {
     const N = window.OBJEDNAVKY;
     const byt = typ === "bytový dům";
@@ -36,12 +58,8 @@
         <p class="obj-adresa">${esc(kratkaAdresa(adresa))}${byt ? " · byt" : " · rodinný dům"}</p>
         <fieldset class="obj-balicky">
           <legend class="skryte">Balíček</legend>
-          <label class="obj-balicek"><input type="radio" name="balicek" value="proverka" checked>
-            <span class="obj-bal-text"><span class="obj-bal-nazev"><b>Prověrka</b><b>${kc(N.ceny.proverka)}</b></span>
-            <span class="obj-bal-popis">Právní stav z katastru včetně exekucí, územní plán a stavby v okolí, verdikt a úkoly před koupí. Report do 5 minut.</span></span></label>
-          <label class="obj-balicek"><input type="radio" name="balicek" value="plus">
-            <span class="obj-bal-text"><span class="obj-bal-nazev"><b>Prověrka PLUS</b><b>${kc(N.ceny.plus)}</b></span>
-            <span class="obj-bal-popis">Navíc odhad ceny ze skutečných prodejů v domě a sousedních domech (katastr, přepočteno na dnešek), srovnání s cenou v inzerátu a tři čísla k vyjednávání; podrobný report s tabulkou prodejů. Do 10 minut.</span></span></label>
+          ${kartaBalicku("proverka", "Prověrka", N.ceny.proverka, "Právní stav z katastru včetně vlastníků, územní plán a stavby v okolí, verdikt a úkoly před koupí. Report do 5 minut.", true)}
+          ${kartaBalicku("plus", "Prověrka PLUS", N.ceny.plus, "Navíc odhad ceny ze skutečných prodejů v domě a okolí, tři čísla k vyjednávání a podrobný report. Do 10 minut.", false)}
         </fieldset>
         ${byt ? `<div class="obj-byt">
           <div class="obj-radek">
@@ -99,6 +117,13 @@
       ukazPlochu();
       if (!nevim.hidden) f.prijmeni.focus();
     });
+    f.querySelectorAll(".obj-rozbal-tl").forEach((tl) => tl.addEventListener("click", (e) => {
+      e.preventDefault();   // tlačítko je v labelu: jen rozbalit, balíček nevybírat
+      const r = f.querySelector(`#${tl.getAttribute("aria-controls")}`);
+      r.hidden = !r.hidden;
+      tl.setAttribute("aria-expanded", String(!r.hidden));
+      tl.textContent = r.hidden ? "Co přesně dostanu" : "Skrýt";
+    }));
     const prepni = () => { plus.hidden = balicek() !== "plus"; tl.textContent = tlText(balicek()); ukazPlochu(); };
     f.querySelectorAll("input[name=balicek]").forEach((r) => r.addEventListener("change", prepni));
     // Cena se při psaní formátuje po tisících: 214 414 156 (Petr 13. 11. 2026).
