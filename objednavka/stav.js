@@ -39,7 +39,7 @@
     const vysoky = matchMedia("(min-width: 900px)").matches;
     // Přiblížení podle velikosti domu: rodinný dům cca 220 m, velký panelák nejvýš 340 m (původně 140 m, varianta B 700 m).
     const sirka = Math.min(340, Math.max(220, 5 * Math.max(Math.max(...sx) - Math.min(...sx), Math.max(...sy) - Math.min(...sy))));
-    const [w, h, pw, ph] = vysoky ? [sirka, sirka * 1.3125, 640, 840] : [sirka, sirka * 5 / 7, 700, 500];
+    const [w, h, pw, ph] = vysoky ? [sirka, sirka * 760 / 640, 640, 760] : [sirka, sirka * 5 / 7, 700, 500];
     const bbox = [cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2];
     const obr = `https://ags.cuzk.gov.cz/arcgis1/rest/services/ORTOFOTO/MapServer/export?bbox=${bbox.join(",")}&bboxSR=5514&imageSR=5514&size=${pw},${ph}&format=jpg&f=image`;
     const X = (x) => ((x - bbox[0]) / w * pw).toFixed(1), Y = (y) => ((bbox[3] - y) / h * ph).toFixed(1);
