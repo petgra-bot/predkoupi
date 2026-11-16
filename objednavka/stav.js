@@ -213,7 +213,7 @@
           <div><dt>${o.typ === "byt" && k.cena_kn?.rozsah !== "okoli" ? "Odhad z prodejů v domě" : "Odhad z prodejů v okolí"}</dt><dd>${esc(k.cena.trh)}</dd></div><div><dt>Rozdíl</dt><dd>${esc(k.cena.odchylka)}</dd></div></dl>
           <p>${esc(k.cena.text)}</p>${cenaKn(k.cena_kn)}</div>`
           : `<div class="rp-plus"><h2>Odhad ceny <span class="rp-odznak zamceno">V Prověrce PLUS</span></h2>
-            <p><b>Nepřeplácíte?</b> Odhad ceny ze skutečných prodejů v domě a sousedních domech (katastr), přepočtený na dnešní ceny, a srovnání s požadovanou cenou je v Prověrce PLUS. Dům a okolí už máme prověřené, doplníme jen cenu${o.doplatek_plus ? ` za ${o.doplatek_plus} Kč` : ""}.</p>
+            <p><b>Nepřeplácíte?</b> Odhad ceny ze skutečných prodejů v domě a sousedních domech (katastr), přepočtený na dnešní ceny, a srovnání s požadovanou cenou je v Prověrce PLUS. Dům a okolí už máme prověřené, doplníme odhad ceny, podrobný report${o.doplnit ? "" : " a prověření vlastníka v evidenci exekucí"}${o.doplatek_plus ? ` za ${o.doplatek_plus} Kč` : ""}.</p>
             ${o.doplatek_plus ? doplatekHtml(o) : `<p><a href="mailto:info@predkoupi.cz?subject=${encodeURIComponent("Doplnit odhad ceny, objednávka " + o.cislo)}">Napište nám</a>.</p>`}</div>`}
         ${(k.hlavni_zjisteni || []).length ? `<section><h2>Hlavní zjištění</h2>${k.hlavni_zjisteni.map((z) => `
           <div class="rp-zjisteni ${esc(z.barva)}">${stitek(z.barva)}<h3>${esc(z.titulek)}</h3><p>${esc(z.text)}</p>
