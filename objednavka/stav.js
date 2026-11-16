@@ -213,8 +213,8 @@
           <div><dt>${o.typ === "byt" && k.cena_kn?.rozsah !== "okoli" ? "Odhad z prodejů v domě" : "Odhad z prodejů v okolí"}</dt><dd>${esc(k.cena.trh)}</dd></div><div><dt>Rozdíl</dt><dd>${esc(k.cena.odchylka)}</dd></div></dl>
           <p>${esc(k.cena.text)}</p>${cenaKn(k.cena_kn)}</div>`
           : `<div class="rp-plus"><h2>Odhad ceny <span class="rp-odznak zamceno">V Prověrce PLUS</span></h2>
-            <p><b>Nepřeplácíte?</b> Odhad ceny ze skutečných prodejů v domě a sousedních domech (katastr) a srovnání s cenou v inzerátu je v Prověrce PLUS. Dům a okolí už máme prověřené, doplníme jen cenu za 500 Kč –
-            <a href="mailto:info@predkoupi.cz?subject=${encodeURIComponent("Doplnit odhad ceny, objednávka " + o.cislo)}">napište nám</a>.</p></div>`}
+            <p><b>Nepřeplácíte?</b> Odhad ceny ze skutečných prodejů v domě a sousedních domech (katastr), přepočtený na dnešní ceny, a srovnání s požadovanou cenou je v Prověrce PLUS. Dům a okolí už máme prověřené, doplníme jen cenu${o.doplatek_plus ? ` za ${o.doplatek_plus} Kč` : ""}.</p>
+            ${o.doplatek_plus ? doplatekHtml(o) : `<p><a href="mailto:info@predkoupi.cz?subject=${encodeURIComponent("Doplnit odhad ceny, objednávka " + o.cislo)}">Napište nám</a>.</p>`}</div>`}
         ${(k.hlavni_zjisteni || []).length ? `<section><h2>Hlavní zjištění</h2>${k.hlavni_zjisteni.map((z) => `
           <div class="rp-zjisteni ${esc(z.barva)}">${stitek(z.barva)}<h3>${esc(z.titulek)}</h3><p>${esc(z.text)}</p>
           ${z.co_delat ? `<p class="rp-co">→ ${esc(z.co_delat)}</p>` : ""}</div>`).join("")}</section>` : ""}
@@ -233,6 +233,7 @@
       </article>`;
     $("objednavka").querySelector(".rp")?.classList.add("rp-objev");
     napojDoplneni(o);
+    napojDoplatek(o);
     $("objednavka").querySelectorAll("input[data-u]").forEach((c) => c.addEventListener("change", () => {
       ulozene[c.dataset.u] = c.checked;
       try { localStorage.setItem(`predkoupi-ukoly-${token}`, JSON.stringify(ulozene)); } catch { /* bez úložiště */ }
@@ -270,6 +271,37 @@
         <button type="submit" class="tl tmave-tl">Doplnit byt</button></form>
       <p class="rp-nap">Najdete ho v rezervační smlouvě, ve vyúčtování od SVJ, nebo se zeptejte makléře. Doplnit jde jednou.</p>
       <p class="rp-doplnit-zprava" role="alert"></p></section>` : "";
+
+  // Doplatek na Prověrku PLUS (Petr 17. 11. 2026): klient doplní požadovanou cenu, stav (u bytu plochu) a zaplatí.
+  const STAVY_NEM = [["pred-rekonstrukci", "Před rekonstrukcí"], ["bezny", "Běžný"], ["po-rekonstrukci", "Po rekonstrukci"], ["novostavba", "Novostavba"]];
+  const doplatekHtml = (o) => `<form class="rp-doplatek" novalidate>
+      <label>Požadovaná cena (Kč)<input name="cena" type="text" inputmode="numeric" autocomplete="off" placeholder="např. 8 900 000"></label>
+      ${o.typ === "byt" ? `<label>Plocha bytu (m²)<input name="plocha" type="text" inputmode="decimal" autocomplete="off" placeholder="např. 68"></label>` : ""}
+      <label>Stav<select name="stav"><option value="">Vyberte</option>${STAVY_NEM.map(([v, t]) => `<option value="${v}">${t}</option>`).join("")}</select></label>
+      <label class="rp-doplatek-souhlas"><input type="checkbox" name="souhlas"><span>Souhlasím s <a href="/podminky.html" target="_blank">obchodními podmínkami</a>. Chci odhad hned po zaplacení a beru na vědomí, že hotový report už nejde vrátit.</span></label>
+      <button type="submit" class="tl tmave-tl">Zaplatit ${o.doplatek_plus} Kč</button>
+      <p class="rp-doplnit-zprava" role="alert"></p></form>`;
+
+  function napojDoplatek(o) {
+    const f = $("objednavka").querySelector("form.rp-doplatek");
+    f?.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const zpr = f.querySelector(".rp-doplnit-zprava");
+      const cena = Number(String(f.cena.value).replace(/\D/g, "")), plocha = f.plocha ? Number(String(f.plocha.value).replace(",", ".")) : null;
+      if (!(cena > 100000)) { zpr.textContent = "Doplňte požadovanou cenu v Kč."; f.cena.focus(); return; }
+      if (f.plocha && !(plocha > 5)) { zpr.textContent = "Doplňte plochu bytu v m²."; f.plocha.focus(); return; }
+      if (!f.stav.value) { zpr.textContent = "Vyberte stav."; f.stav.focus(); return; }
+      if (!f.souhlas.checked) { zpr.textContent = "Potvrďte souhlas s obchodními podmínkami."; return; }
+      f.querySelector("button").disabled = true; zpr.textContent = "";
+      try {
+        const r = await fetch(`${N.api}/objednavka/${encodeURIComponent(token)}/doplatek`, { method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ cena, plocha, stav: f.stav.value, souhlas: true }) });
+        const d = await r.json().catch(() => ({}));
+        if (!r.ok || !d.presmerovani) throw new Error(typeof d.detail === "string" ? d.detail : "Platbu se nepodařilo založit.");
+        location.href = d.presmerovani;
+      } catch (err) { zpr.textContent = `${err.message} Zkuste to znovu, nebo napište na info@predkoupi.cz.`; f.querySelector("button").disabled = false; }
+    });
+  }
 
   function napojDoplneni(o) {
     const f = $("objednavka").querySelector("form.cislo-bytu");

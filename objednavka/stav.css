@@ -200,3 +200,10 @@ body.bily-report .hlavicka { background: var(--navy); }
 
 /* Mapka Prahy v rohu snímku průběhu na mobilu menší (Petr 17. 11. 2026). */
 @media (max-width: 600px) { .pr-praha { width: 24%; min-width: 86px; } }
+.rp-doplatek { display: grid; gap: 12px; margin-top: 14px; }
+.rp-doplatek label { display: grid; gap: 6px; font-weight: 600; font-size: .9rem; }
+.rp-doplatek input[type=text], .rp-doplatek select { min-height: 48px; padding: 0 14px; border: 1px solid #b8bdcc; border-radius: 0; font: 400 1rem "Montserrat", sans-serif; color: var(--navy); background: #fff; }
+.rp-doplatek input::placeholder { color: #a3a8ba; font-style: italic; }
+.rp-doplatek .rp-doplatek-souhlas { display: flex; gap: 10px; align-items: flex-start; font-weight: 400; }
+.rp-doplatek .rp-doplatek-souhlas input { margin-top: 4px; width: 18px; height: 18px; flex: none; accent-color: var(--navy); }
+@media (min-width: 640px) { .rp-doplatek { grid-template-columns: 1fr 1fr; } .rp-doplatek .rp-doplatek-souhlas, .rp-doplatek button, .rp-doplatek .rp-doplnit-zprava { grid-column: 1 / -1; } .rp-doplatek button { justify-self: start; } }
