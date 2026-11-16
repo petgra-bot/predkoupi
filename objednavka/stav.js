@@ -153,7 +153,7 @@
       ${o ? `<p><b>Odhad pro tento byt: ${mil(o.od_kc)} – ${mil(o.do_kc)}</b>, nejspíš ${mil(o.median_kc)} <span class="rp-spol ${esc(o.spolehlivost)}">${esc(SPOL[o.spolehlivost] || "")}</span></p>` : ""}
       ${v ? `<dl class="rp-vyjednavani"><div><dt>Dobrá koupě</dt><dd>do ${mil(v.dobra_koupe_kc)}</dd></div><div><dt>Férová cena</dt><dd>${mil(v.ferova_cena_kc)}</dd></div><div><dt>Horní hranice</dt><dd>${mil(v.horni_hranice_kc)}</dd></div></dl>` : ""}
       ${vety.length ? `<p>${vety.map(esc).join(" ")}</p>` : ""}
-      ${c.graf_svg ? `<figure class="rp-graf">${c.graf_svg}<figcaption>Skutečné prodeje bytů ${c.rozsah === "okoli" ? `v sousedních domech do ${c.okruh_m || 300} m` : "v domě"} (katastr), cena za m²; oranžově požadovaná cena.</figcaption></figure>` : ""}
+      ${c.graf_svg ? `<figure class="rp-graf">${c.graf_svg}<figcaption>Skutečné prodeje bytů ${c.rozsah === "okoli" ? `v sousedních domech do ${c.okruh_m || 300} m` : "v domě"} (katastr), cena za m² přepočtená na dnešek; plné tečky = byty podobné velikosti, ze kterých je odhad; oranžově požadovaná cena.</figcaption></figure>` : ""}
       ${c.preceneni ? `<p class="rp-nap">${esc(c.preceneni.popis)}</p>` : ""}
       <p class="rp-nap"><a href="#report-pdf">Tabulka všech prodejů s cenou, plochou a cenou za m² je v podrobném reportu (PDF) ↓</a></p>
     </div>`;
@@ -200,16 +200,17 @@
           <p class="rp-verdikt-text">${esc(k.verdikt?.text)}</p>
           ${(k.verdikt?.stitky || []).length ? `<p class="rp-stitky">${k.verdikt.stitky.map((s) => `<span class="${esc(s.barva)}">${esc(s.text)}</span>`).join("")}</p>` : ""}
         </div>
+        <!-- Přehled hned pod verdiktem, pak cena (Petr 16. 11. 2026, jako PDF) -->
+        <section><h2>Přehled</h2><ul class="rp-prehled">${(k.semafor || []).map((s) => `<li class="${esc(s.barva)}">
+          <span class="rp-oblast">${esc(s.oblast)}</span>${stitek(s.barva)}<span class="rp-text">${esc(s.text)}</span></li>`).join("")}</ul></section>
         ${k.cena ? `<div class="rp-cena ${esc(k.cena.barva)}"><h2>Odhad ceny <span class="rp-odznak">Prověrka PLUS</span></h2>
           <dl><div><dt>${esc(k.cena.popisek || "Požadovaná cena")}</dt><dd>${esc(k.cena.pozadovana)}</dd></div>
-          <div><dt>${o.typ === "byt" ? "Prodeje v domě" : "Prodeje v okolí"}</dt><dd>${esc(k.cena.trh)}</dd></div><div><dt>Rozdíl</dt><dd>${esc(k.cena.odchylka)}</dd></div></dl>
+          <div><dt>${o.typ === "byt" && k.cena_kn?.rozsah !== "okoli" ? "Odhad z prodejů v domě" : "Odhad z prodejů v okolí"}</dt><dd>${esc(k.cena.trh)}</dd></div><div><dt>Rozdíl</dt><dd>${esc(k.cena.odchylka)}</dd></div></dl>
           <p>${esc(k.cena.text)}</p>${cenaKn(k.cena_kn)}</div>`
           : `<div class="rp-plus"><h2>Odhad ceny <span class="rp-odznak zamceno">V Prověrce PLUS</span></h2>
             <p><b>Nepřeplácíte?</b> Odhad ceny ze skutečných prodejů v domě a sousedních domech (katastr) a srovnání s cenou v inzerátu je v Prověrce PLUS. Rizika už máme, doplníme jen cenu za 500 Kč –
             <a href="mailto:info@predkoupi.cz?subject=${encodeURIComponent("Doplnit odhad ceny, objednávka " + o.cislo)}">napište nám</a>.</p></div>`}
         ${doplnitHtml(o)}
-        <section><h2>Přehled</h2><ul class="rp-prehled">${(k.semafor || []).map((s) => `<li class="${esc(s.barva)}">
-          <span class="rp-oblast">${esc(s.oblast)}</span>${stitek(s.barva)}<span class="rp-text">${esc(s.text)}</span></li>`).join("")}</ul></section>
         ${(k.hlavni_zjisteni || []).length ? `<section><h2>Hlavní zjištění</h2>${k.hlavni_zjisteni.map((z) => `
           <div class="rp-zjisteni ${esc(z.barva)}">${stitek(z.barva)}<h3>${esc(z.titulek)}</h3><p>${esc(z.text)}</p>
           ${z.co_delat ? `<p class="rp-co">→ ${esc(z.co_delat)}</p>` : ""}</div>`).join("")}</section>` : ""}
