@@ -284,6 +284,14 @@
 
   function napojDoplatek(o) {
     const f = $("objednavka").querySelector("form.rp-doplatek");
+    // Cena se při psaní formátuje po tisících jako v objednávce: 9 990 000 (Petr 18. 11. 2026).
+    f?.cena.addEventListener("input", () => {
+      const pole = f.cena, pred = pole.value.slice(0, pole.selectionStart).replace(/\D/g, "").length;
+      const c = Number(pole.value.replace(/\D/g, "")) || 0;
+      pole.value = c ? c.toLocaleString("cs-CZ") : "";
+      let pos = 0, n = 0; while (pos < pole.value.length && n < pred) { if (/\d/.test(pole.value[pos])) n++; pos++; }
+      pole.setSelectionRange(pos, pos);
+    });
     f?.addEventListener("submit", async (e) => {
       e.preventDefault();
       const zpr = f.querySelector(".rp-doplnit-zprava");
