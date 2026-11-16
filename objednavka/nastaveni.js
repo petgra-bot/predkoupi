@@ -1,7 +1,7 @@
 // Objednávky: kde jsou zapnuté a kam se posílají. Soubor je stejný na produkci i na testu.
 // Do instalace serveru objednávek jen test (proverka.gratzer.cz); na produkci zapnout přepsáním PRODUKCE na true.
 (() => {
-  const PRODUKCE = true;   // zapnuto 14. 11. 2026 se zkušebním textem (platby testovací do schválení Comgate)
+  const PRODUKCE = true;   // zapnuto 14. 11. 2026, ostré platby od 16. 11. 2026
   const h = location.hostname;
   const lokalne = h === "localhost" || h === "127.0.0.1";
   const test = h.startsWith("proverka.") || lokalne;
@@ -11,8 +11,8 @@
   const predvedeni = test && q.has("predvedeni");
   window.OBJEDNAVKY = {
     zapnute: PRODUKCE || test,
-    // Zkušební provoz do schválení platební brány Comgate (rozhodnutí 13. 11. 2026): platby jsou testovací.
-    zkusebni: true,
+    // Ostré platby na predkoupi.cz od schválení Comgate (16. 11. 2026); test (proverka) zůstává ve zkušebním provozu.
+    zkusebni: test,
     predvedeni,
     // Na vlastním počítači jde API přesměrovat parametrem ?api=http://127.0.0.1:8100 (jinde ne).
     // Test (proverka.gratzer.cz) má vlastní testovací server: https://api.predkoupi.cz/test (rozdělení 14. 11. 2026).
