@@ -77,7 +77,7 @@
           </div>
           ${ochutnavka?.oblasti?.length ? `<div class="pr-vime"><h3>Co už víme z přehledu zdarma</h3><ul>${ochutnavka.oblasti.map((x) =>
             `<li><b>${esc(x.oblast)}</b><span class="pr-stav ${esc(x.barva)}">${esc(BARVY[x.barva] || "")}</span><span>${esc(x.text)}</span></li>`).join("")}
-            ${plus ? `<li><b>Cena</b><span class="pr-stav seda">Počítáme</span><span>Odhad ze skutečných prodejů v domě a v sousedních domech, přepočtený na dnešní ceny.</span></li>`
+            ${plus ? `<li><b>Cena</b><span class="pr-stav seda">Počítáme</span><span>Odhad ze skutečných prodejů ${o.typ === "byt" ? "v domě a v sousedních domech" : "podobných domů v okolí"}, přepočtený na dnešní ceny.</span></li>`
               : `<li><b>Cena</b><span class="pr-stav zamceno">V Prověrce PLUS</span><span>Odhad ceny ze skutečných prodejů v katastru je součástí Prověrky PLUS.</span></li>`}</ul>
             <p>V reportu k tomu přidáme právní stav z katastru${plus ? ", <b>odhad ceny ze skutečných prodejů s čísly k vyjednávání</b>" : ""}, verdikt a úkoly na míru.</p></div>` : ""}
         </div>`;
