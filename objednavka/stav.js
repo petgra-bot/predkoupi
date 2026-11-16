@@ -218,12 +218,13 @@
         ${(k.hlavni_zjisteni || []).length ? `<section><h2>Hlavní zjištění</h2>${k.hlavni_zjisteni.map((z) => `
           <div class="rp-zjisteni ${esc(z.barva)}">${stitek(z.barva)}<h3>${esc(z.titulek)}</h3><p>${esc(z.text)}</p>
           ${z.co_delat ? `<p class="rp-co">→ ${esc(z.co_delat)}</p>` : ""}</div>`).join("")}</section>` : ""}
+        <!-- Další zjištění před Co udělat; Co udělat, Co jsme nezjistili a Z čeho vycházíme vždy na konci (Petr 18. 11. 2026) -->
+        ${(k.dalsi_zjisteni || []).length ? `<section><h2>Další zjištění</h2><ul class="rp-dalsi">${k.dalsi_zjisteni.map((z) =>
+          `<li class="${esc(z.barva)}"><b>${esc(z.titulek)}</b> ${esc(z.text)}</li>`).join("")}</ul></section>` : ""}
         ${(k.ukoly || []).length ? `<section><h2>Co udělat</h2><p class="rp-nap">Odškrtávejte si, co máte hotové – uložíme to v tomto prohlížeči.</p>
           ${Object.entries(skupiny).map(([kdy, polozky]) => `<h3 class="rp-faze">${esc(FAZE[kdy] || kdy)}</h3><ul class="rp-ukoly">${polozky.map(([u, i]) => `
             <li><label><input type="checkbox" data-u="${i}"${ulozene[i] ? " checked" : ""}><span>${esc(u.ukol)}
             ${u.komu ? `<em>${esc(u.komu)}</em>` : ""}</span></label></li>`).join("")}</ul>`).join("")}</section>` : ""}
-        ${(k.dalsi_zjisteni || []).length ? `<section><h2>Další zjištění</h2><ul class="rp-dalsi">${k.dalsi_zjisteni.map((z) =>
-          `<li class="${esc(z.barva)}"><b>${esc(z.titulek)}</b> ${esc(z.text)}</li>`).join("")}</ul></section>` : ""}
         ${(k.nezjisteno || []).length ? `<details class="rp-sbal"><summary>Co jsme nezjistili (${k.nezjisteno.length})</summary><ul>${k.nezjisteno.map((x) => `<li>${esc(x)}</li>`).join("")}</ul></details>` : ""}
         ${(k.zdroje || []).length ? `<details class="rp-sbal"><summary>Z čeho vycházíme</summary><ul>${k.zdroje.map((x) => `<li>${esc(x)}</li>`).join("")}</ul></details>` : ""}
         <section class="rp-stahnout" id="report-pdf"><h2>Report v PDF</h2><div class="rp-lista">${pdfOdkazy(o)}</div>
