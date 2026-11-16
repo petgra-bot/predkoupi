@@ -19,9 +19,13 @@
     pravni: ["Hledáme věcná břemena, zástavy, exekuce a plomby", "Ověřujeme vlastníky v insolvenčním rejstříku", "Vyhodnocujeme stavby a záměry v okolí"],
     cena: ["Stahujeme skutečné prodeje z katastru", "Hledáme prodeje i v sousedních domech", "Přepočítáváme na dnešní ceny", "Porovnáváme s požadovanou cenou"],
     report: ["Skládáme verdikt a přehled šesti oblastí", "Píšeme úkoly na míru před rezervací, podpisem a převodem", "Vytváříme PDF"],
-    kontrola: ["Kontrolujeme čísla proti zdrojům", "Druhá kontrola čte report očima kupujícího"],
+    kontrola: ["Kontrolujeme čísla proti zdrojům", "Druhá kontrola čte report očima kupujícího", "Ověřujeme verdikt proti všem zjištěním",
+      "Kontrolujeme úkoly a jejich pořadí", "Porovnáváme základní a podrobný report", "Dokončujeme kontrolu – ještě chvilku"],
   };
   const VAHY = { platba: 2, katastr: 15, fakta: 20, pravni: 20, cena: 10, report: 20, kontrola: 13 };   // přibližný podíl na čase
+  // Přibližná délka kroku v sekundách: uvnitř kroku ukazatel plynule roste, nezamrzne (Petr 16. 11.: dřív stál na 87 % u kontroly).
+  const DELKA_S = { platba: 5, katastr: 60, fakta: 60, cena: 40, pravni: 150, report: 150, kontrola: 180 };
+  const zacatekKroku = {};
   const KLICE = ["platba", "katastr", "fakta", "pravni", "report", "kontrola"];   // starší server bez klíčů a bez kroku ceny
   const klic = (f, i) => f.klic || KLICE[i] || "report";
 
@@ -54,6 +58,7 @@
     if (!vykreslenProbeh) {
       vykreslenProbeh = true;
       adresaMapky = o.adresa;
+      const plus = o.faze.some((f) => f.klic === "cena" && !f.zamceno);
       const vlastni = snimekOkoli(o.obrys || ochutnavka?.obrys);
       const snimek = vlastni || (o.letecky ? `<img src="${N.api}${o.letecky}" alt="Letecký snímek domu">` : ochutnavka?.snimek || "");
       $("objednavka").innerHTML = `
@@ -71,8 +76,10 @@
               ${email ? `<span class="pr-preklep">Překlep v e-mailu? Napište nám na <a href="mailto:info@predkoupi.cz?subject=${encodeURIComponent("Oprava e-mailu, objednávka " + o.cislo)}">info@predkoupi.cz</a>.</span>` : ""}</p>
           </div>
           ${ochutnavka?.oblasti?.length ? `<div class="pr-vime"><h3>Co už víme z přehledu zdarma</h3><ul>${ochutnavka.oblasti.map((x) =>
-            `<li><b>${esc(x.oblast)}</b><span class="pr-stav ${esc(x.barva)}">${esc(BARVY[x.barva] || "")}</span><span>${esc(x.text)}</span></li>`).join("")}</ul>
-            <p>V reportu k tomu přidáme právní stav z katastru, verdikt a úkoly na míru.</p></div>` : ""}
+            `<li><b>${esc(x.oblast)}</b><span class="pr-stav ${esc(x.barva)}">${esc(BARVY[x.barva] || "")}</span><span>${esc(x.text)}</span></li>`).join("")}
+            ${plus ? `<li><b>Cena</b><span class="pr-stav seda">Počítáme</span><span>Odhad ze skutečných prodejů v domě a v sousedních domech, přepočtený na dnešní ceny.</span></li>`
+              : `<li><b>Cena</b><span class="pr-stav zamceno">V Prověrce PLUS</span><span>Odhad ceny ze skutečných prodejů v katastru je součástí Prověrky PLUS.</span></li>`}</ul>
+            <p>V reportu k tomu přidáme právní stav z katastru${plus ? ", <b>odhad ceny ze skutečných prodejů s čísly k vyjednávání</b>" : ""}, verdikt a úkoly na míru.</p></div>` : ""}
         </div>`;
       clearInterval(ticker);
       ticker = setInterval(() => posunZpravu(), tiche ? 4000 : 2600);
@@ -85,7 +92,8 @@
       f.insertAdjacentHTML("afterbegin", `<img src="${N.api}${o.letecky}" alt="Letecký snímek domu">`);
     }
     const kroky = o.faze.filter((f) => !f.zamceno);
-    const hotovo = kroky.map((f) => f.hotovo);
+    // Krok se odškrtne, až jsou hotové i všechny před ním (běží souběžně – odhad ceny nesmí předběhnout právní stav).
+    const hotovo = kroky.map((f, i) => kroky.slice(0, i + 1).every((x) => x.hotovo));
     const aktivni = hotovo.indexOf(false);
     $("objednavka").querySelectorAll(".pr-kroky > li:not(.zamceno)").forEach((li, i) => {
       li.classList.toggle("hotovo", hotovo[i]);
@@ -94,7 +102,14 @@
     });
     // Odhad procent: hotové kroky + uplynulý čas v aktivním kroku (nikdy přes 96 %, dokud není hotovo).
     const vahy = kroky.map((f, i) => VAHY[klic(f, i)] || 10), soucet = vahy.reduce((a, b) => a + b, 0);
-    const celkem = o.dodani_min * 60, zaKroky = vahy.reduce((s, v, i) => s + (hotovo[i] ? v : 0), 0) / soucet * 100;
+    const celkem = o.dodani_min * 60;
+    let zaKroky = vahy.reduce((s, v, i) => s + (hotovo[i] ? v : 0), 0) / soucet * 100;
+    if (aktivni >= 0) {   // uvnitř kroku: podíl uplynulého času z obvyklé délky, nejvýš 85 % kroku
+      const k = klic(kroky[aktivni], aktivni);
+      zacatekKroku[k] ??= Date.now();
+      const podil = Math.min(0.85, (Date.now() - zacatekKroku[k]) / 1000 / (DELKA_S[k] || 60));
+      zaKroky += vahy[aktivni] / soucet * 100 * podil;
+    }
     const casove = Math.min(96, (o.bezi_s / celkem) * 100);
     const pct = Math.round(Math.min(96, Math.max(zaKroky, casove, 3)));
     const u = $("objednavka").querySelector(".pr-ukazatel");
@@ -131,9 +146,11 @@
     const kde = c.rozsah === "okoli" ? `v sousedních domech do ${c.okruh_m || 300} m` : "v domě";
     if (c.vratit_priplatek) return `<div class="rp-cena-kn"><p>V domě ani v sousedních domech do 300 m nebyly za posledních 5 let aspoň 3 prodeje bytů se známou plochou, odhad ceny proto nedáváme. <b>Příplatek za Prověrku PLUS vám vrátíme.</b></p></div>`;
     if (c.rozsah === "okoli") vety.push(`Odhad vychází z prodejů ${kde} – v samotném domě se za 5 let neprodalo dost bytů.`);
-    if (z.pozice) vety.push(`Požadovaná cena ${z.pozice.pozadovana_kc_m2.toLocaleString("cs-CZ")} Kč/m² je vyšší než u ${z.pozice.drazsi_nez} z ${z.pozice.z} prodejů bytů ${kde} (přepočteno na dnešní ceny).`);
+    if (z.stejny_typ?.nejblizsi) { const n = z.stejny_typ.nejblizsi; const [y, m, d] = String(n.datum).split("-");
+      vety.push(`Nejbližší srovnání: byt ${String(n.plocha_m2).replace(".", ",")} m² ${kde} prodaný ${+d}. ${+m}. ${y} za ${mil(n.cena_kc)}${n.cena_kc_dnes ? `, dnes cca ${mil(n.cena_kc_dnes)}` : ""}.`); }
+    if (z.pozice) vety.push(`Požadovaná cena ${z.pozice.pozadovana_kc_m2.toLocaleString("cs-CZ")} Kč/m² je vyšší než u ${z.pozice.drazsi_nez} z ${z.pozice.z} prodejů bytů ${z.pozice.podobne ? "podobné velikosti " : ""}${kde} (přepočteno na dnešní ceny).`);
     if (z.posledni_prodej_bytu) vety.push(`Tento byt se naposledy prodal v roce ${z.posledni_prodej_bytu.datum.slice(0, 4)} za ${mil(z.posledni_prodej_bytu.cena_kc)}.`);
-    if (z.stejny_typ) vety.push(`Byty stejné velikosti se ${kde} prodaly ${z.stejny_typ.pocet}× (medián dnes cca ${mil(z.stejny_typ.median_kc)}).`);
+    if (z.stejny_typ && z.stejny_typ.pocet > 1) vety.push(`Byty stejné velikosti se ${kde} prodaly ${z.stejny_typ.pocet}× (medián dnes cca ${mil(z.stejny_typ.median_kc)}).`);
     return `<div class="rp-cena-kn">
       ${o ? `<p><b>Odhad pro tento byt: ${mil(o.od_kc)} – ${mil(o.do_kc)}</b>, nejspíš ${mil(o.median_kc)} <span class="rp-spol ${esc(o.spolehlivost)}">${esc(SPOL[o.spolehlivost] || "")}</span></p>` : ""}
       ${v ? `<dl class="rp-vyjednavani"><div><dt>Dobrá koupě</dt><dd>do ${mil(v.dobra_koupe_kc)}</dd></div><div><dt>Férová cena</dt><dd>${mil(v.ferova_cena_kc)}</dd></div><div><dt>Horní hranice</dt><dd>${mil(v.horni_hranice_kc)}</dd></div></dl>` : ""}

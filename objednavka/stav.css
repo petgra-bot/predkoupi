@@ -56,7 +56,7 @@
 @media (max-width: 560px) { .pr-vime li { grid-template-columns: 1fr auto; } .pr-vime li > span:last-child { grid-column: 1 / -1; } }
 /* Stav slovem, ne jen barvou (WCAG 1.4.1, hodnocení 13. 11.) */
 .pr-stav { --c: var(--seda); font-size: .66rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 2px 7px; border: 1px solid var(--c); color: var(--c); white-space: nowrap; }
-.pr-stav.zelena { --c: var(--zelena-t); } .pr-stav.oranzova { --c: var(--oranzova-t); } .pr-stav.cervena { --c: var(--cervena-t); } .pr-stav.seda { --c: var(--slabe-t); }
+.pr-stav.zelena { --c: var(--zelena-t); } .pr-stav.oranzova { --c: var(--oranzova-t); } .pr-stav.cervena { --c: var(--cervena-t); } .pr-stav.seda { --c: var(--slabe-t); } .pr-stav.zamceno { --c: var(--slabe-t); }
 .pr-preklep { display: block; margin-top: 6px; font-size: .85rem; color: var(--slabe-t); }
 .pr-preklep a, .pr-odejit b { color: var(--text-t); }
 .pr-vime p { margin: 12px 0 0; font-size: .85rem; color: var(--slabe-t); }
