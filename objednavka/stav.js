@@ -3,7 +3,14 @@
 (() => {
   const N = window.OBJEDNAVKY;
   const $ = (id) => document.getElementById(id);
-  const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+  // Nezlomitelné mezery (Petr 18. 11. 2026): jednopísmenné předložky, číslo s jednotkou, tisíce, „Praha 13“, „č.p. 910“, „§ 1186“.
+  const nb = (s) => s
+    .replace(/(?<=^|[\s\u00a0(„])([vkszouaiVKSZOUAI]) /g, "$1\u00a0")
+    .replace(/(\d) (?=\d{3}(?!\d))/g, "$1\u00a0")
+    .replace(/(\d) (?=(?:m²|m|km|dB|Kč|mil\.|tis\.|%|ha)(?![A-Za-zÀ-ž]))/g, "$1\u00a0")
+    .replace(/(Praha|č\.\s?p\.|č\.\s?o\.|§|LV|odst\.|čl\.) (?=\d)/g, "$1\u00a0");
+  const esc = (s) => nb(String(s ?? "")).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   const token = new URLSearchParams(location.search).get("t") || "";
   const tiche = matchMedia("(prefers-reduced-motion: reduce)").matches;
   const kratkaAdresa = (a) => String(a || "").split(",").map((x) => x.trim()).filter((x) => x && !/^\d{3}\s?\d{2}\b/.test(x)).slice(0, 2).join(", ");
