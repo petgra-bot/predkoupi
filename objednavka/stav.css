@@ -103,7 +103,7 @@ body.bily-report .paticka-zdroje { color: var(--tlumene); }
 .rp-prehled li { display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; padding: 12px 0; border-bottom: 1px solid var(--linka); }
 .rp-oblast { font-weight: 700; }
 .rp-prehled .rp-text { grid-column: 1 / -1; color: var(--tlumene); font-size: .95rem; }
-@media (min-width: 640px) { .rp-prehled li { grid-template-columns: 180px 130px 1fr; } .rp-prehled .rp-text { grid-column: auto; } }
+@media (min-width: 640px) { .rp-prehled li { grid-template-columns: 180px 130px 1fr; align-items: start; } .rp-prehled .rp-text { grid-column: auto; } .rp-prehled .rp-stitek { justify-self: start; } }
 
 .rp-zjisteni { --c: var(--seda); border: 1px solid var(--linka); border-top: 3px solid var(--c); padding: 16px 18px; margin-bottom: 12px; }
 .rp-zjisteni.cervena { --c: var(--cervena); } .rp-zjisteni.oranzova { --c: var(--oranzova); }

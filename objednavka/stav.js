@@ -19,8 +19,8 @@
     pravni: ["Hledáme věcná břemena, zástavy, exekuce a plomby", "Ověřujeme vlastníky v insolvenčním rejstříku", "Vyhodnocujeme stavby a záměry v okolí"],
     cena: ["Stahujeme skutečné prodeje z katastru", "Hledáme prodeje i v sousedních domech", "Přepočítáváme na dnešní ceny", "Porovnáváme s požadovanou cenou"],
     report: ["Skládáme verdikt a přehled šesti oblastí", "Píšeme úkoly na míru před rezervací, podpisem a převodem", "Vytváříme PDF"],
-    kontrola: ["Kontrolujeme čísla proti zdrojům", "Druhá kontrola čte report očima kupujícího", "Ověřujeme verdikt proti všem zjištěním",
-      "Kontrolujeme úkoly a jejich pořadí", "Porovnáváme základní a podrobný report", "Dokončujeme kontrolu – ještě chvilku"],
+    // Petr 17. 11. 2026: kontrola nesmí působit nekonečně – dvě zprávy (Prověrka jen automatické kontroly, PLUS nejvýš 3 min).
+    kontrola: ["Kontrolujeme čísla a verdikt proti zdrojům", "Odesíláme report"],
   };
   const VAHY = { platba: 2, katastr: 15, fakta: 20, pravni: 20, cena: 10, report: 20, kontrola: 13 };   // přibližný podíl na čase
   // Přibližná délka kroku v sekundách: uvnitř kroku ukazatel plynule roste, nezamrzne (Petr 16. 11.: dřív stál na 87 % u kontroly).
@@ -104,6 +104,7 @@
     let zaKroky = vahy.reduce((s, v, i) => s + (hotovo[i] ? v : 0), 0) / soucet * 100;
     if (aktivni >= 0) {   // uvnitř kroku: podíl uplynulého času z obvyklé délky, nejvýš 85 % kroku
       const k = klic(kroky[aktivni], aktivni);
+      if (k === "kontrola" && !o.faze.some((f) => f.klic === "cena" && !f.zamceno)) DELKA_S.kontrola = 20;   // Prověrka: jen skripty
       zacatekKroku[k] ??= Date.now();
       const podil = Math.min(0.85, (Date.now() - zacatekKroku[k]) / 1000 / (DELKA_S[k] || 60));
       zaKroky += vahy[aktivni] / soucet * 100 * podil;

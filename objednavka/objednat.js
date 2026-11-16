@@ -75,7 +75,7 @@
               <label>Patro<input name="patro" type="text" maxlength="10" value="${p(inz?.patro)}"></label>
             </div>
             <label class="obj-souhlas obj-bez-bytu"><input type="checkbox" name="bez_bytu">
-              <span>Když byt nepůjde určit, prověřte dům a okolí i bez něj. Číslo bytu pak můžu doplnit do 30 dnů zdarma.</span></label>
+              <span>Rozumím, že když byt nepůjde určit, dostanu prověrku domu a okolí <b>bez výpisu bytu a bez prověření vlastníka</b> (cena se nemění). Číslo bytu pak můžu do 30 dnů zdarma doplnit a report doplníte.</span></label>
           </div>
         </div>` : ""}
         <div class="obj-plus" hidden>
@@ -172,7 +172,7 @@
         if (!cb && !nevimOtevreno()) ch.push([f.cislo_bytu, "Doplňte číslo bytu, nebo klikněte na „Číslo nevím“."]);
         if (!cb && nevimOtevreno()) {
           if (!f.prijmeni.value.trim() && !(pl > 0)) ch.push([f.prijmeni, "Doplňte příjmení majitele, nebo plochu bytu – podle nich byt najdeme."]);
-          if (!f.bez_bytu.checked) ch.push([f.bez_bytu, "Potvrďte, že když byt nepůjde určit, prověříme dům a okolí bez něj."]);
+          if (!f.bez_bytu.checked) ch.push([f.bez_bytu, "Potvrďte, že rozumíte: bez určeného bytu nebude ve zprávě výpis bytu ani prověření vlastníka."]);
         }
         if ((balicek() === "plus" || nevimOtevreno()) && f.plocha.value && (pl < 10 || pl > 500)) ch.push([f.plocha, "Plocha bytu má být 10–500 m²."]);
         if (balicek() === "plus" && !(pl > 0)) ch.push([f.plocha, "Doplňte plochu bytu – bez ní cenu neodhadneme."]);
