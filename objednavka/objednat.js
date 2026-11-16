@@ -30,7 +30,7 @@
     proverka: ["<b>Aktuální výpis z katastru</b> – zástavy, břemena, exekuce, plomby, předkupní práva",
                "<b>Prověření vlastníků</b> v insolvenčním rejstříku",
                "<b>Územní plán a stavby v okolí</b> – Metropolitní plán, záměry, EIA, uzávěry",
-               "<b>Povodně, radon a hluk</b> u nejhlučnější fasády ve dne i v noci",
+               "<b>Povodně, radon a hluk</b> u nejhlučnější fasády (celodenní průměr i noc)",
                "Vlastník pozemku pod domem, elektrická vedení, nežádoucí zařízení",
                "<b>Verdikt a úkoly před koupí na míru</b> – co ověřit, s kým a kdy",
                "Report v PDF i v prohlížeči <b>do 5 minut</b>"],

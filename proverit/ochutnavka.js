@@ -138,7 +138,7 @@ function ochutnavkaOblasti(dum, rodinny = true) {
   const hluk = (async () => {
     const [lden, ln] = await Promise.all([maxPasmo(`${OCH.HLUK}/9`, "LDEN"), maxPasmo(`${OCH.HLUK}/10`, "IPEN")]);
     const b = ochBarvaHluku(lden, ln);
-    return radek("Hluk", b, `U nejhlučnější fasády ve dne ${ochPasmo(lden)}, v noci ${ochPasmo(ln)}` + (b !== "zelena" ? " – nad doporučením WHO." : "."));
+    return radek("Hluk", b, `U nejhlučnější fasády celodenní průměr ${ochPasmo(lden)}, v noci ${ochPasmo(ln)}` + (b !== "zelena" ? " – nad doporučením WHO." : "."));
   })();
   const radon = (async () => {
     const f = (await ochVolej(`${OCH.RADON}/1/query`, { where: "1=1", outFields: "radon_idx,radon_popis", returnGeometry: false,
