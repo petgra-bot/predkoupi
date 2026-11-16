@@ -538,10 +538,28 @@ $("formular").addEventListener("submit", overit);
 
 // Mobil a tablet: plovoucí „Objednat prověrku“, dokud formulář není na obrazovce (Petr 14. 11. 2026).
 let plovouciPozorovatel = null;
+// Tlačítko v hlavičce (Petr 16. 11. 2026, varianta A): před prověřením „Ceník“ na úvod, po prověření
+// „Objednat · od 790 Kč“ k formuláři na této stránce – klient nemusí znovu zadávat adresu.
+function hlavickaTlacitko(cil) {
+  const h = $("hlavicka-tl");
+  if (!h) return;
+  h.onclick = null;
+  if (!cil) { h.href = "/#ceny"; h.textContent = "Ceník"; return; }
+  h.href = "#objednat";
+  h.textContent = `Objednat · od ${window.OBJEDNAVKY.ceny.proverka.toLocaleString("cs-CZ")} Kč`;
+  h.onclick = (e) => {
+    if (!document.body.contains(cil)) { hlavickaTlacitko(null); return; } // nové hledání bez objednávky → zpět na ceník
+    e.preventDefault();
+    cil.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+    cil.querySelector("input, button")?.focus({ preventScroll: true });
+  };
+}
+
 function plovouciObjednat() {
   document.querySelector(".obj-plovouci")?.remove();
   plovouciPozorovatel?.disconnect();
   const cil = $("objednat");
+  hlavickaTlacitko(cil);
   if (!cil || !window.IntersectionObserver) return;
   const tl = document.createElement("a");
   tl.className = "obj-plovouci"; tl.href = "#objednat"; tl.hidden = true;
