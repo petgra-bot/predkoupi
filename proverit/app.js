@@ -339,6 +339,12 @@ async function vyberNaMape(vsechny, kandidati, uvod, inz) {
     : zvyraznene.has(so) ? { color: "#f0a050", weight: 3, fillColor: "#f0a050", fillOpacity: 0.45 }
     : { color: "#ffffff", weight: 2, fillColor: "#ffffff", fillOpacity: 0.15 };
   let vybranaVrstva = null, vybranyDum = null;
+  // Výřez mapy nastavit DŘÍV, než se přidají obrysy (17. 11. 2026, inzerát iDNES Toruňská): plátno bez nastaveného
+  // výřezu spadne na „Cannot read properties of undefined (reading 'min')“.
+  const body = domy.flatMap((d) => (obrysy[d.so] || []).flat());
+  if (body.length) mapa.fitBounds(L.latLngBounds(body), { padding: [20, 20], maxZoom: 19 });
+  else if (inz?.lat) mapa.setView([inz.lat, inz.lon], 18);
+  else mapa.setView([50.08, 14.43], 12);
   const skupina = L.featureGroup().addTo(mapa);
   for (const d of domy) {
     if (!obrysy[d.so]) continue;
@@ -354,7 +360,6 @@ async function vyberNaMape(vsechny, kandidati, uvod, inz) {
   }
   if (inz?.lat && inz.presnost !== "ulice") L.circleMarker([inz.lat, inz.lon], { radius: 6, color: "#f08080" })
     .bindTooltip("bod z inzerátu").addTo(mapa);
-  if (skupina.getLayers().length) mapa.fitBounds(skupina.getBounds(), { padding: [20, 20], maxZoom: 19 });
   $("vybrany").querySelector("button").addEventListener("click", () =>
     zobrazBudovu(vybranyDum, inz, { jak: "vybráno na mapě", jistota: "jistá" }).catch(chyba));
 }
