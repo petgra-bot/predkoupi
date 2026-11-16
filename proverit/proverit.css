@@ -236,3 +236,9 @@ a.obj-plovouci, a.obj-plovouci:visited { position: fixed; left: 16px; right: 16p
 .obj-rozbal li { margin: 3px 0; line-height: 1.45; }
 .obj-rozbal li::marker { color: #2a9d8f; }
 @media (prefers-reduced-motion: reduce) { .obj-rozbal-tl::after { transition: none; } }
+
+/* Petr 17. 11. 2026 (poznámky 5): nápověda v poli se nesmí plést s vyplněnou hodnotou. */
+.objednat input::placeholder { color: #a3a8ba; font-style: italic; font-weight: 400; opacity: 1; }
+.objednat input:not(:placeholder-shown) { font-weight: 600; border-color: var(--navy); }
+/* Mapka Prahy v rohu snímku na mobilu menší. */
+@media (max-width: 600px) { .och-praha { width: 24% !important; min-width: 86px !important; } }

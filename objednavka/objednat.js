@@ -63,7 +63,7 @@
         </fieldset>
         ${byt ? `<div class="obj-byt">
           <div class="obj-radek">
-            <label>Číslo bytu (jednotky)<input name="cislo_bytu" type="text" maxlength="20" autocomplete="off" placeholder="např. 1311/146"></label>
+            <label>Číslo bytu (jednotky)<input name="cislo_bytu" type="text" maxlength="20" autocomplete="off" placeholder="např. 1234/56"></label>
             <label class="obj-plocha" hidden>Plocha bytu (m²)<input name="plocha" type="number" inputmode="decimal" min="10" max="500" step="0.1" value="${p(inz?.plocha_m2)}"></label>
           </div>
           <p class="obj-napoveda obj-cislo-tip">Díky číslu bytu prověříme přesně váš byt. Najdete ho v rezervační smlouvě, ve vyúčtování od SVJ, nebo se zeptejte makléře.</p>
@@ -75,7 +75,7 @@
               <label>Patro<input name="patro" type="text" maxlength="10" value="${p(inz?.patro)}"></label>
             </div>
             <label class="obj-souhlas obj-bez-bytu"><input type="checkbox" name="bez_bytu">
-              <span>Rozumím, že když byt nepůjde určit, dostanu prověrku domu a okolí <b>bez výpisu bytu a bez prověření vlastníka</b> (cena se nemění). Číslo bytu pak můžu do 30 dnů zdarma doplnit a report doplníte.</span></label>
+              <span>Když byt nepůjde určit, dostanu prověrku domu a okolí <b>bez výpisu bytu a vlastníka</b>. Číslo bytu můžu do 30 dnů doplnit zdarma.</span></label>
           </div>
         </div>` : ""}
         <div class="obj-plus" hidden>
@@ -99,7 +99,7 @@
         <p class="obj-souhrn" role="alert"></p>
         <button class="tl tmave-tl obj-zaplatit" type="submit">${tlText("proverka")}</button>
         <p class="obj-stav-zprava" role="status" aria-live="polite"></p>
-        <p class="obj-drobne">Platbu kartou, Apple Pay, Google Pay nebo převodem zajišťuje Comgate. <a href="/osobni-udaje.html" target="_blank">Ochrana osobních údajů</a> · Petr Grätzer, IČO 19843071, neplátce DPH.</p>
+        <p class="obj-drobne">Platbu kartou, Apple Pay, Google Pay nebo převodem zajišťuje Comgate. <a href="/podminky.html" target="_blank">Obchodní podmínky</a> · <a href="/osobni-udaje.html" target="_blank">Ochrana osobních údajů</a></p>
       </form>`;
     const f = kontejner.querySelector("form");
     const tl = f.querySelector(".obj-zaplatit"), zprava = f.querySelector(".obj-stav-zprava"), souhrn = f.querySelector(".obj-souhrn");

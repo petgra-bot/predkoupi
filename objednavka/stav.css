@@ -197,3 +197,6 @@ body.bily-report .hlavicka { background: var(--navy); }
 /* Patička stránky objednávky (W14): dva řádky, bez lámání uprostřed věty */
 .obj-paticka { max-width: none; }
 .obj-paticka span { display: block; }
+
+/* Mapka Prahy v rohu snímku průběhu na mobilu menší (Petr 17. 11. 2026). */
+@media (max-width: 600px) { .pr-praha { width: 24%; min-width: 86px; } }

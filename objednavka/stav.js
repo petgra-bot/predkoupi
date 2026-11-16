@@ -22,9 +22,9 @@
     // Petr 17. 11. 2026: kontrola nesmí působit nekonečně – dvě zprávy (Prověrka jen automatické kontroly, PLUS nejvýš 3 min).
     kontrola: ["Kontrolujeme čísla a verdikt proti zdrojům", "Odesíláme report"],
   };
-  const VAHY = { platba: 2, katastr: 15, fakta: 20, pravni: 20, cena: 10, report: 20, kontrola: 13 };   // přibližný podíl na čase
+  const VAHY = { platba: 2, katastr: 15, fakta: 20, pravni: 25, cena: 10, report: 25, kontrola: 8 };   // přibližný podíl na čase (17. 11.: kontrola kratší)
   // Přibližná délka kroku v sekundách: uvnitř kroku ukazatel plynule roste, nezamrzne (Petr 16. 11.: dřív stál na 87 % u kontroly).
-  const DELKA_S = { platba: 5, katastr: 60, fakta: 60, cena: 40, pravni: 150, report: 150, kontrola: 180 };
+  const DELKA_S = { platba: 5, katastr: 60, fakta: 90, cena: 40, pravni: 150, report: 150, kontrola: 180 };
   const zacatekKroku = {};
   const KLICE = ["platba", "katastr", "fakta", "pravni", "report", "kontrola"];   // starší server bez klíčů a bez kroku ceny
   const klic = (f, i) => f.klic || KLICE[i] || "report";
@@ -109,8 +109,11 @@
       const podil = Math.min(0.85, (Date.now() - zacatekKroku[k]) / 1000 / (DELKA_S[k] || 60));
       zaKroky += vahy[aktivni] / soucet * 100 * podil;
     }
-    const casove = Math.min(96, (o.bezi_s / celkem) * 100);
-    const pct = Math.round(Math.min(96, Math.max(zaKroky, casove, 3)));
+    // Petr 17. 11. 2026 (poznámky 5): procenta nesmí předběhnout krok, který právě běží (dřív 96 % a ještě report
+    // a kontrola). Čas jen dorovnává uvnitř aktivního kroku, nejvýš do 90 % jeho podílu.
+    const strop = aktivni >= 0 ? (vahy.slice(0, aktivni).reduce((a, b) => a + b, 0) + vahy[aktivni] * 0.9) / soucet * 100 : 96;
+    const casove = Math.min(strop, (o.bezi_s / celkem) * 100);
+    const pct = Math.round(Math.min(96, strop, Math.max(zaKroky, casove, 3)));
     const u = $("objednavka").querySelector(".pr-ukazatel");
     u.setAttribute("aria-valuenow", pct);
     u.querySelector(".pr-procenta").textContent = `${pct} %`;
