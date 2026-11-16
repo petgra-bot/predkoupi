@@ -2,6 +2,7 @@
 # Před koupí – krok 4: rozdělení serveru na OSTROU a TESTOVACÍ instanci (Petr 14. 11. 2026).
 # Spouští Petr jako root (jednou; lze spustit znovu):
 #   curl -fsSL "https://raw.githubusercontent.com/petgra-bot/predkoupi/main/server/rozdeleni.sh" | bash
+#   (nová verze z testovací větve: …/predkoupi/test/server/rozdeleni.sh)
 #
 #   ostrá:     /home/nemo/app       větev nemo-ostra                 port 8100  https://api.predkoupi.cz        web predkoupi.cz
 #   testovací: /home/nemo/app-test  větev claude/kind-davinci-ue2jrk port 8101  https://api.predkoupi.cz/test   web proverka.gratzer.cz
@@ -101,6 +102,17 @@ aktualizuj /home/nemo/app nemo-ostra nemo-api
 exit 0
 S
 chmod 755 /usr/local/bin/nemo-aktualizace
+# Doplnění čísla bytu k reportu bez konkrétního bytu (žádost e-mailem; Petr 15. 11. 2026):
+#   nemo-doplnit 2026-0131 1311/146        (ostrá)      nemo-doplnit test T2026-0131 1311/146   (testovací)
+cat > /usr/local/bin/nemo-doplnit <<'S'
+#!/usr/bin/env bash
+set -euo pipefail
+D=/home/nemo/app
+if [ "${1:-}" = test ]; then D=/home/nemo/app-test; shift; fi
+[ $# = 2 ] || { echo "Použití: nemo-doplnit [test] <číslo objednávky> <číslo bytu>"; exit 1; }
+cd "$D/nemo" && sudo -u nemo /home/nemo/venv/bin/python -m objednavky.doplnit "$1" "$2"
+S
+chmod 755 /usr/local/bin/nemo-doplnit
 
 echo "== 5/6 Caddy: api.predkoupi.cz (ostré) a api.predkoupi.cz/test (testovací)"
 cat > /etc/caddy/Caddyfile <<'S'

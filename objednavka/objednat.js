@@ -25,6 +25,28 @@
     return nej && nej[1] > 0 && nej[1] <= 2 ? `${jmeno}@${nej[0]}` : null;
   };
 
+  // Co obsahuje balíček (W12, Petr 15. 11. 2026 vybral variantu B): „Co přesně dostanu“ rozbalí seznam přímo v kartě.
+  const OBSAH = {
+    proverka: ["<b>Aktuální výpis z katastru</b> – zástavy, břemena, exekuce, plomby, předkupní práva",
+               "<b>Prověření vlastníků</b> v insolvenčním rejstříku",
+               "<b>Územní plán a stavby v okolí</b> – Metropolitní plán, záměry, EIA, uzávěry",
+               "<b>Povodně, radon a hluk</b> u nejhlučnější fasády ve dne i v noci",
+               "Vlastník pozemku pod domem, elektrická vedení, nežádoucí zařízení",
+               "<b>Verdikt a úkoly před koupí na míru</b> – co ověřit, s kým a kdy",
+               "Report v PDF i v prohlížeči <b>do 5 minut</b>"],
+    plus: ["Vše z Prověrky",
+           "<b>Odhad ceny ze skutečných prodejů</b> v domě i v sousedních domech do 300 m (katastr), přepočtený na dnešní ceny",
+           "<b>Tři čísla k vyjednávání</b> – dobrá koupě, férová cena, horní hranice – a graf cen",
+           "<b>Prověření vlastníků v evidenci exekucí</b>",
+           "<b>Podrobný report</b> – tabulka prodejů, mapy povodní a hluku, všechna zjištění se zdroji, daň z nemovitosti",
+           "Report <b>do 10 minut</b>"],
+  };
+  const kartaBalicku = (v, nazev, cena, popis, vybrany) => `<label class="obj-balicek"><input type="radio" name="balicek" value="${v}"${vybrany ? " checked" : ""}>
+            <span class="obj-bal-text"><span class="obj-bal-nazev"><b>${nazev}</b><b>${kc(cena)}</b></span>
+            <span class="obj-bal-popis">${popis}</span>
+            <button type="button" class="obj-rozbal-tl" aria-expanded="false" aria-controls="obj-obsah-${v}">Co přesně dostanu</button>
+            <span class="obj-rozbal" id="obj-obsah-${v}" hidden><ul>${OBSAH[v].map((x) => `<li>${x}</li>`).join("")}</ul></span></span></label>`;
+
   window.objednavkaFormular = (kontejner, { adresa, typ, inz }) => {
     const N = window.OBJEDNAVKY;
     const byt = typ === "bytový dům";
@@ -36,24 +58,31 @@
         <p class="obj-adresa">${esc(kratkaAdresa(adresa))}${byt ? " · byt" : " · rodinný dům"}</p>
         <fieldset class="obj-balicky">
           <legend class="skryte">Balíček</legend>
-          <label class="obj-balicek"><input type="radio" name="balicek" value="proverka" checked>
-            <span class="obj-bal-text"><span class="obj-bal-nazev"><b>Prověrka</b><b>${kc(N.ceny.proverka)}</b></span>
-            <span class="obj-bal-popis">Právní stav z katastru včetně exekucí, územní plán a stavby v okolí, verdikt a úkoly před koupí. Report do 5 minut.</span></span></label>
-          <label class="obj-balicek"><input type="radio" name="balicek" value="plus">
-            <span class="obj-bal-text"><span class="obj-bal-nazev"><b>Prověrka PLUS</b><b>${kc(N.ceny.plus)}</b></span>
-            <span class="obj-bal-popis">Navíc odhad ceny ze skutečných prodejů v katastru a srovnání s cenou v inzerátu; podrobný report s mapami. Do 10 minut.</span></span></label>
+          ${kartaBalicku("proverka", "Prověrka", N.ceny.proverka, "Právní stav z katastru včetně vlastníků, územní plán a stavby v okolí, verdikt a úkoly před koupí. Report do 5 minut.", true)}
+          ${kartaBalicku("plus", "Prověrka PLUS", N.ceny.plus, "Navíc odhad ceny ze skutečných prodejů v domě a okolí, tři čísla k vyjednávání a podrobný report. Do 10 minut.", false)}
         </fieldset>
-        ${byt ? `<div class="obj-radek">
-          <label>Plocha bytu (m²)<input name="plocha" type="number" inputmode="decimal" min="10" max="500" step="0.1" value="${p(inz?.plocha_m2)}"></label>
-          <label>Číslo bytu, pokud ho znáte<input name="cislo_bytu" type="text" maxlength="20" placeholder="např. 1234/5 z kupní smlouvy"></label>
-        </div>
-        <p class="obj-napoveda">Podle plochy najdeme byt v katastru. Když bude odpovídat víc bytů, po zaplacení vám je ukážeme na výběr.</p>` : ""}
+        ${byt ? `<div class="obj-byt">
+          <div class="obj-radek">
+            <label>Číslo bytu (jednotky)<input name="cislo_bytu" type="text" maxlength="20" autocomplete="off" placeholder="např. 1311/146"></label>
+            <label class="obj-plocha" hidden>Plocha bytu (m²)<input name="plocha" type="number" inputmode="decimal" min="10" max="500" step="0.1" value="${p(inz?.plocha_m2)}"></label>
+          </div>
+          <p class="obj-napoveda obj-cislo-tip">Díky číslu bytu prověříme přesně váš byt. Najdete ho v rezervační smlouvě, ve vyúčtování od SVJ, nebo se zeptejte makléře.</p>
+          <button type="button" class="obj-odkaz obj-nevim-tl" aria-expanded="false" aria-controls="obj-nevim">Číslo nevím</button>
+          <div class="obj-nevim" id="obj-nevim" hidden>
+            <p class="obj-napoveda">Byt najdeme podle majitele ve výpisu z katastru, nebo podle plochy a patra. Příjmení použijeme jen k určení bytu a hned ho smažeme.</p>
+            <div class="obj-radek">
+              <label>Příjmení majitele (prodávajícího)<input name="prijmeni" type="text" maxlength="60" autocomplete="off" placeholder="z inzerátu nebo od makléře"></label>
+              <label>Patro<input name="patro" type="text" maxlength="10" value="${p(inz?.patro)}"></label>
+            </div>
+            <label class="obj-souhlas obj-bez-bytu"><input type="checkbox" name="bez_bytu">
+              <span>Když byt nepůjde určit, prověřte dům a okolí i bez něj. Číslo bytu pak můžu doplnit do 30 dnů zdarma.</span></label>
+          </div>
+        </div>` : ""}
         <div class="obj-plus" hidden>
           <p class="obj-napoveda">${inz ? "Co víme z inzerátu, je předvyplněné; doplňte zbytek." : "Pro odhad ceny opište z inzerátu cenu, plochu a stav."}</p>
           <div class="obj-radek">
             <label>Požadovaná cena (Kč)<input name="cena" type="text" inputmode="numeric" autocomplete="off" value="${inz?.cena_kc ? p(Number(inz.cena_kc).toLocaleString("cs-CZ")) : ""}" placeholder="např. 8 900 000"></label>
-            ${byt ? `<label>Patro, pokud ho znáte<input name="patro" type="text" maxlength="10" value="${p(inz?.patro)}"></label>`
-                  : `<label>Užitná plocha domu (m²)<input name="plocha_dum" type="number" inputmode="decimal" min="20" max="2000" value="${p(inz?.plocha_m2)}"></label>`}
+            ${byt ? "" : `<label>Užitná plocha domu (m²)<input name="plocha_dum" type="number" inputmode="decimal" min="20" max="2000" value="${p(inz?.plocha_m2)}"></label>`}
           </div>
           <fieldset class="obj-stav"><legend>Stav</legend>
             ${STAVY.map(([v, t]) => `<label><input type="radio" name="stav" value="${v}"><span>${t}</span></label>`).join("")}
@@ -62,7 +91,7 @@
         <label class="obj-email">E-mail pro report<input name="email" type="email" autocomplete="email" inputmode="email" autocapitalize="none" spellcheck="false" placeholder="jmeno@example.cz"></label>
         <p class="obj-navrh" hidden></p>
         <input type="text" name="web" tabindex="-1" autocomplete="off" class="skryte" aria-hidden="true">
-        <p class="obj-jistota">Když report nedodáme, vrátíme celé peníze.</p>
+        <p class="obj-jistota">Když report nedodáme, peníze vám vrátíme.</p>
         <label class="obj-souhlas"><input type="checkbox" name="souhlas">
           <span>Souhlasím s <a href="/podminky.html" target="_blank">obchodními podmínkami</a>. Chci report hned po zaplacení a beru na vědomí, že hotový report už nejde vrátit (odstoupit od smlouvy).</span></label>
         ${N.predvedeni ? `<p class="obj-zkusebni">Ukázka: nic se neplatí ani neodesílá. Průběh je zrychlený (skutečně do 5, u PLUS do 10 minut) a na konci uvidíte vzorový report ke Karlické 910/49 v Praze 16.</p>`
@@ -76,7 +105,26 @@
     const tl = f.querySelector(".obj-zaplatit"), zprava = f.querySelector(".obj-stav-zprava"), souhrn = f.querySelector(".obj-souhrn");
     const plus = f.querySelector(".obj-plus"), navrh = f.querySelector(".obj-navrh");
     const balicek = () => f.balicek.value;
-    const prepni = () => { plus.hidden = balicek() !== "plus"; tl.textContent = tlText(balicek()); };
+    // Byt po krocích (Petr 15. 11. 2026): číslo bytu; „Číslo nevím“ rozbalí příjmení majitele, patro a souhlas s prověrkou
+    // bez konkrétního bytu. Plocha je vidět v PLUS (odhad ceny) a při „Číslo nevím“ (hledání podle plochy).
+    const nevimTl = f.querySelector(".obj-nevim-tl"), nevim = f.querySelector(".obj-nevim"), plochaBytu = f.querySelector(".obj-plocha");
+    const nevimOtevreno = () => nevim && !nevim.hidden;
+    const ukazPlochu = () => { if (plochaBytu) plochaBytu.hidden = !(balicek() === "plus" || nevimOtevreno()); };
+    nevimTl?.addEventListener("click", () => {
+      nevim.hidden = !nevim.hidden;
+      nevimTl.setAttribute("aria-expanded", String(!nevim.hidden));
+      nevimTl.textContent = nevim.hidden ? "Číslo nevím" : "Číslo znám";
+      ukazPlochu();
+      if (!nevim.hidden) f.prijmeni.focus();
+    });
+    f.querySelectorAll(".obj-rozbal-tl").forEach((tl) => tl.addEventListener("click", (e) => {
+      e.preventDefault();   // tlačítko je v labelu: jen rozbalit, balíček nevybírat
+      const r = f.querySelector(`#${tl.getAttribute("aria-controls")}`);
+      r.hidden = !r.hidden;
+      tl.setAttribute("aria-expanded", String(!r.hidden));
+      tl.textContent = r.hidden ? "Co přesně dostanu" : "Skrýt";
+    }));
+    const prepni = () => { plus.hidden = balicek() !== "plus"; tl.textContent = tlText(balicek()); ukazPlochu(); };
     f.querySelectorAll("input[name=balicek]").forEach((r) => r.addEventListener("change", prepni));
     // Cena se při psaní formátuje po tisících: 214 414 156 (Petr 13. 11. 2026).
     const cenaPole = f.cena, cislo = (s) => Number(String(s).replace(/\D/g, "")) || 0;
@@ -113,15 +161,21 @@
     const pocetText = (n) => n === 1 ? "Doplňte prosím 1 údaj – je označený červeně." : `Doplňte prosím ${n} údaje – jsou označené červeně.`;
     const prepocti = () => { const n = f.querySelectorAll(".obj-chybne").length; souhrn.textContent = n ? pocetText(n) : ""; };
     f.addEventListener("input", (e) => { if (e.target.name && e.target.name !== "balicek") { vycisti(e.target); prepocti(); } });
-    f.addEventListener("change", (e) => { if (e.target.name === "stav" || e.target.name === "souhlas") { vycisti(e.target); prepocti(); } });
+    f.addEventListener("change", (e) => { if (["stav", "souhlas", "bez_bytu"].includes(e.target.name)) { vycisti(e.target); prepocti(); } });
 
     const kontrola = () => {
       const ch = [];
       const v = (x) => Number(String(x).replace(",", "."));
       if (byt) {
-        const pl = v(f.plocha.value);
-        if (!f.cislo_bytu.value.trim() && !(pl > 0)) ch.push([f.plocha, "Doplňte plochu bytu z inzerátu (nebo číslo bytu)."]);
-        else if (f.plocha.value && (pl < 10 || pl > 500)) ch.push([f.plocha, "Plocha bytu má být 10–500 m²."]);
+        const pl = v(f.plocha.value), cb = f.cislo_bytu.value.trim().replace(/\s+/g, "");
+        if (cb && !/^\d{1,5}\/\d{1,4}$/.test(cb)) ch.push([f.cislo_bytu, "Číslo bytu má tvar 1311/146 (číslo domu, lomítko, číslo bytu)."]);
+        if (!cb && !nevimOtevreno()) ch.push([f.cislo_bytu, "Doplňte číslo bytu, nebo klikněte na „Číslo nevím“."]);
+        if (!cb && nevimOtevreno()) {
+          if (!f.prijmeni.value.trim() && !(pl > 0)) ch.push([f.prijmeni, "Doplňte příjmení majitele, nebo plochu bytu – podle nich byt najdeme."]);
+          if (!f.bez_bytu.checked) ch.push([f.bez_bytu, "Potvrďte, že když byt nepůjde určit, prověříme dům a okolí bez něj."]);
+        }
+        if ((balicek() === "plus" || nevimOtevreno()) && f.plocha.value && (pl < 10 || pl > 500)) ch.push([f.plocha, "Plocha bytu má být 10–500 m²."]);
+        if (balicek() === "plus" && !(pl > 0)) ch.push([f.plocha, "Doplňte plochu bytu – bez ní cenu neodhadneme."]);
       }
       if (balicek() === "plus") {   // v PLUS povinné: cena, plocha a stav (Petr 13. 11. 2026)
         if (cislo(f.cena.value) < 100000) ch.push([f.cena, "Doplňte požadovanou cenu z inzerátu – bez ní cenu neporovnáme."]);
@@ -154,11 +208,16 @@
       const data = {
         balicek: balicek(), email: f.email.value.trim(), adresa, typ: byt ? "byt" : "dum", souhlas: true, web: f.web.value || null,
         inzerat: inz?.url || null,
-        plocha: byt ? Number(String(f.plocha.value).replace(",", ".")) || null : (balicek() === "plus" ? Number(f.plocha_dum?.value) || null : null),
-        cislo_bytu: byt ? f.cislo_bytu.value.trim() || null : null,
+        plocha: byt ? (balicek() === "plus" || nevimOtevreno() ? Number(String(f.plocha.value).replace(",", ".")) || null : null)
+          : (balicek() === "plus" ? Number(f.plocha_dum?.value) || null : null),
+        cislo_bytu: byt ? f.cislo_bytu.value.trim().replace(/\s+/g, "") || null : null,
+        prijmeni: byt && nevimOtevreno() && !f.cislo_bytu.value.trim() ? f.prijmeni.value.trim() || null : null,
+        bez_bytu: byt && nevimOtevreno() && f.bez_bytu.checked,
         cena: balicek() === "plus" ? cislo(f.cena.value) || null : null,
-        patro: balicek() === "plus" && byt ? f.patro.value.trim() || null : null,
+        patro: byt && nevimOtevreno() ? f.patro.value.trim() || null : null,
         stav: balicek() === "plus" ? f.stav.value : null,
+        // Obrys domu z přehledu zdarma: server ho vrátí stránce průběhu (snímek a mapka Prahy i z odkazu v e-mailu).
+        obrys: (() => { try { return JSON.parse(document.getElementById("ochutnavka")?.dataset.obrys || "null"); } catch { return null; } })(),
       };
       tl.disabled = true; zprava.textContent = N.predvedeni ? "Spouštíme ukázku…" : "Připravujeme platbu…"; zprava.dataset.typ = "";
       try {
@@ -170,6 +229,7 @@
           const och = document.getElementById("ochutnavka");
           sessionStorage.setItem("predkoupi-ochutnavka", JSON.stringify({
             snimek: och?.querySelector(".och-snimek")?.innerHTML.replace(/<figcaption>.*<\/figcaption>/s, "") || "",
+            obrys: och?.dataset.obrys ? JSON.parse(och.dataset.obrys) : null,   // obrys domu v S-JTSK pro snímek a mapku Prahy v průběhu
             oblasti: [...(och?.querySelectorAll("tr[data-oblast]") || [])].map((tr) => ({ oblast: tr.dataset.oblast,
               barva: [...tr.querySelector(".och-znacka").classList].find((c) => ["zelena", "oranzova", "cervena", "seda"].includes(c)) || "seda",
               text: tr.cells[2].textContent.trim() })),

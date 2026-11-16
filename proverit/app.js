@@ -419,7 +419,7 @@ async function zobrazBudovu(adresa, inz, puvod) {
       <a class="tl obrys-tmave" href="mailto:info@predkoupi.cz?subject=${encodeURIComponent("Prověrka: " + adresa.adresa)}">Napsat nám</a></div></div>`
       : vPraze && window.OBJEDNAVKY?.zapnute ? `<div id="ochutnavka" class="karta och-karta"></div><div class="co-dal" id="objednat"></div>`
       : vPraze ? `<div id="ochutnavka" class="karta och-karta"></div><div class="co-dal"><h3>Co dál</h3>
-      <p>Objednávky Prověrky (790 Kč) a Prověrky PLUS (1 290 Kč) spouštíme v nejbližších týdnech.</p>
+      <p>Objednávky Prověrky (790 Kč) a Prověrky PLUS (1 390 Kč) spouštíme v nejbližších týdnech.</p>
       <div class="akce"><a class="tl tmave-tl" href="/#ceny">Co obsahuje Prověrka</a></div><div class="co-dal-zajem" data-zajem data-zdroj="proverit"></div></div>`
       // Mimo Prahu (W11, 12. 11. 2026): měříme zájem – e-mail a obec, ať víme, kam službu rozšířit.
       : `<div class="co-dal"><h3>Mimo Prahu zatím neprověřujeme</h3>
@@ -429,9 +429,10 @@ async function zobrazBudovu(adresa, inz, puvod) {
         data-souhlas="Pošleme jedinou zprávu, až službu rozšíříme do vaší obce, a pak e-mail smažeme. Ukládáme jen e-mail a název obce."
         data-hotovo="až budeme prověřovat i ve vaší obci"></div></div>`);
   mcSlib.then((mc) => { const dd = [...$("vysledek").querySelectorAll("dt")].find((x) => x.textContent === "Městská část")?.nextElementSibling; if (dd) dd.textContent = mc || "–"; });
-  if ($("ochutnavka")) ochutnavka(adresa.so, $("ochutnavka"), { start: puvod.start, obrys: b.obrys, rodinny: !byt });
+  if ($("ochutnavka")) ochutnavka(adresa.so, $("ochutnavka"), { start: puvod.start, obrys: b.obrys, rodinny: !byt, adresa: adresa.text || adresa.adresa || "" });
   $("vysledek").querySelector("[data-znovu]")?.addEventListener("click", () => { const v = $("vstup"); v.value = ""; v.focus(); v.scrollIntoView({ block: "center" }); });
   if ($("objednat")) window.objednavkaFormular($("objednat"), { adresa: adresa.adresa, typ, inz });
+  plovouciObjednat();
   document.querySelectorAll("#vysledek [data-zajem]").forEach((k) => window.zajemFormular?.(k));
   $("vysledek").querySelectorAll("button[data-alt]").forEach((btn) => btn.addEventListener("click", () =>
     zobrazBudovu(alternativy[+btn.dataset.alt], inz, { jak: "vybráno z nabídky", jistota: "jistá" }).catch(chyba)));
@@ -533,4 +534,48 @@ $("formular").addEventListener("submit", overit);
 {
   const q = new URLSearchParams(location.search).get("q");
   if (q) { $("vstup").value = q; $("formular").requestSubmit(); }
+}
+
+// Mobil a tablet: plovoucí „Objednat prověrku“, dokud formulář není na obrazovce (Petr 14. 11. 2026).
+let plovouciPozorovatel = null;
+// Tlačítko v hlavičce (Petr 16. 11. 2026, varianta A): před prověřením „Ceník“ na úvod, po prověření
+// „Objednat · od 790 Kč“ k formuláři na této stránce – klient nemusí znovu zadávat adresu.
+function hlavickaTlacitko(cil) {
+  const h = $("hlavicka-tl");
+  if (!h) return;
+  h.onclick = null;
+  if (!cil) { h.href = "/#ceny"; h.textContent = "Ceník"; return; }
+  h.href = "#objednat";
+  h.textContent = `Objednat · od ${window.OBJEDNAVKY.ceny.proverka.toLocaleString("cs-CZ")} Kč`;
+  h.onclick = (e) => {
+    if (!document.body.contains(cil)) { hlavickaTlacitko(null); return; } // nové hledání bez objednávky → zpět na ceník
+    e.preventDefault();
+    cil.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+    cil.querySelector("input, button")?.focus({ preventScroll: true });
+  };
+}
+
+function plovouciObjednat() {
+  document.querySelector(".obj-plovouci")?.remove();
+  plovouciPozorovatel?.disconnect();
+  const cil = $("objednat");
+  hlavickaTlacitko(cil);
+  if (!cil || !window.IntersectionObserver) return;
+  const tl = document.createElement("a");
+  tl.className = "obj-plovouci"; tl.href = "#objednat"; tl.hidden = true;
+  tl.textContent = `Objednat prověrku · od ${window.OBJEDNAVKY.ceny.proverka.toLocaleString("cs-CZ")} Kč`;
+  tl.addEventListener("click", (e) => {
+    e.preventDefault();
+    cil.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+  });
+  document.body.appendChild(tl);
+  // Ukázat, až klient odroluje k přehledu (ne hned nahoře u pole), a schovat, když vidí formulář.
+  let vidiFormular = false, vidiPole = true;
+  const prepni = () => { tl.hidden = vidiFormular || vidiPole; };
+  plovouciPozorovatel = new IntersectionObserver((zaznamy) => {
+    zaznamy.forEach((z) => { if (z.target === cil) vidiFormular = z.isIntersecting; else vidiPole = z.isIntersecting; });
+    prepni();
+  });
+  plovouciPozorovatel.observe(cil);
+  if ($("vstup")) plovouciPozorovatel.observe($("vstup"));
 }
