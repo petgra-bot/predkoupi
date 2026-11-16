@@ -262,7 +262,7 @@
       <p>Váš byt se nám v domě nepodařilo určit${o.doplnit.duvod ? ` (${esc(o.doplnit.duvod)})` : ""}, proto report prověřuje dům a okolí
       bez právního stavu konkrétního bytu. Doplňte číslo do <b>${esc(o.doplnit.do)}</b> zdarma – doplníme výpis bytu, prověření vlastníků
       a právní stav a pošleme nový report.</p>
-      <form class="cislo-bytu"><label>Číslo bytu (jednotky)<input name="cislo" autocomplete="off" autocapitalize="none" placeholder="např. 1311/146"></label>
+      <form class="cislo-bytu"><label>Číslo bytu (jednotky)<input name="cislo" autocomplete="off" autocapitalize="none" placeholder="např. 1234/56"></label>
         <button type="submit" class="tl tmave-tl">Doplnit byt</button></form>
       <p class="rp-nap">Najdete ho v rezervační smlouvě, ve vyúčtování od SVJ, nebo se zeptejte makléře. Doplnit jde jednou.</p>
       <p class="rp-doplnit-zprava" role="alert"></p></section>` : "";

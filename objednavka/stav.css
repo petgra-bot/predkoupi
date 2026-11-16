@@ -93,6 +93,7 @@ body.bily-report .paticka-zdroje { color: var(--tlumene); }
 .rp-cena p { margin: 0; color: var(--tlumene); }
 .rp-plus { margin-top: 22px; padding: 14px 18px; background: var(--svetla); border-left: 4px solid var(--navy); }
 .rp-plus p { margin: 0; }
+.rp-plus a { color: var(--navy); font-weight: 600; }
 
 .rp-stitek { --c: var(--seda); display: inline-block; font-size: .66rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; padding: 4px 8px; color: #fff; background: var(--c); white-space: nowrap; }
 .rp-stitek.cervena { --c: var(--cervena); } .rp-stitek.oranzova { --c: var(--oranzova); } .rp-stitek.zelena { --c: var(--zelena); }
@@ -173,7 +174,8 @@ body.bily-report .hlavicka { background: var(--navy); }
 @keyframes pr-praha-pulz { from { opacity: .8; transform: scale(1); } to { opacity: 0; transform: scale(3); } }
 
 /* Doplnění čísla bytu k reportu bez konkrétního bytu (15. 11. 2026) – bílý report */
-.rp-doplnit { border: 1px solid var(--navy, #1e2645); border-left-width: 4px; padding: 18px 20px; margin: 0 0 28px; background: #fff; }
+/* Test 10 (17. 11. 2026): .stranka-proverit section { padding: 0 } rámečku vynulovalo okraje – vyšší specificita. */
+.stranka-proverit .rp-doplnit, .rp-doplnit { border: 1px solid var(--navy, #1e2645); border-left-width: 4px; padding: 18px 20px; margin: 22px 0 28px; background: #fff; }
 .rp-doplnit h2 { margin-top: 0; }
 .rp-doplnit .cislo-bytu input { border-color: #b8bdcc; color: var(--navy, #1e2645); background: #fff; }
 .rp-doplnit .cislo-bytu input:focus-visible { outline-color: var(--navy, #1e2645); }
