@@ -207,14 +207,14 @@
         <!-- Přehled hned pod verdiktem, pak cena (Petr 16. 11. 2026, jako PDF) -->
         <section><h2>Přehled</h2><ul class="rp-prehled">${(k.semafor || []).map((s) => `<li class="${esc(s.barva)}">
           <span class="rp-oblast">${esc(s.oblast)}</span>${stitek(s.barva)}<span class="rp-text">${esc(s.text)}</span></li>`).join("")}</ul></section>
+        ${doplnitHtml(o)}
         ${k.cena ? `<div class="rp-cena ${esc(k.cena.barva)}"><h2>Odhad ceny <span class="rp-odznak">Prověrka PLUS</span></h2>
           <dl><div><dt>${esc(k.cena.popisek || "Požadovaná cena")}</dt><dd>${esc(k.cena.pozadovana)}</dd></div>
           <div><dt>${o.typ === "byt" && k.cena_kn?.rozsah !== "okoli" ? "Odhad z prodejů v domě" : "Odhad z prodejů v okolí"}</dt><dd>${esc(k.cena.trh)}</dd></div><div><dt>Rozdíl</dt><dd>${esc(k.cena.odchylka)}</dd></div></dl>
           <p>${esc(k.cena.text)}</p>${cenaKn(k.cena_kn)}</div>`
           : `<div class="rp-plus"><h2>Odhad ceny <span class="rp-odznak zamceno">V Prověrce PLUS</span></h2>
-            <p><b>Nepřeplácíte?</b> Odhad ceny ze skutečných prodejů v domě a sousedních domech (katastr) a srovnání s cenou v inzerátu je v Prověrce PLUS. Rizika už máme, doplníme jen cenu za 500 Kč –
+            <p><b>Nepřeplácíte?</b> Odhad ceny ze skutečných prodejů v domě a sousedních domech (katastr) a srovnání s cenou v inzerátu je v Prověrce PLUS. Dům a okolí už máme prověřené, doplníme jen cenu za 500 Kč –
             <a href="mailto:info@predkoupi.cz?subject=${encodeURIComponent("Doplnit odhad ceny, objednávka " + o.cislo)}">napište nám</a>.</p></div>`}
-        ${doplnitHtml(o)}
         ${(k.hlavni_zjisteni || []).length ? `<section><h2>Hlavní zjištění</h2>${k.hlavni_zjisteni.map((z) => `
           <div class="rp-zjisteni ${esc(z.barva)}">${stitek(z.barva)}<h3>${esc(z.titulek)}</h3><p>${esc(z.text)}</p>
           ${z.co_delat ? `<p class="rp-co">→ ${esc(z.co_delat)}</p>` : ""}</div>`).join("")}</section>` : ""}
