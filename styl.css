@@ -51,6 +51,7 @@ h3 { font-size: 0.9375rem; font-weight: 700; letter-spacing: .02em; line-height:
 .lista { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 24px; min-height: 68px; padding-top: 10px; padding-bottom: 10px; }
 .logo { display: flex; flex-direction: column; text-decoration: none; line-height: 1.15; }
 .logo b { white-space: nowrap; font-weight: 800; letter-spacing: .06em; font-size: 0.9375rem; }
+.logo { align-items: flex-start; }
 .logo img { display: block; height: 34px; width: auto; margin-bottom: 3px; }   /* logo PK | PŘED KOUPÍ (17. 11. 2026) */
 .logo span { font-size: 0.625rem; letter-spacing: .14em; text-transform: uppercase; color: var(--na-tmave-slabe); }
 .hlavicka nav ul { display: flex; gap: 28px; list-style: none; margin: 0; padding: 0; }
