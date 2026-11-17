@@ -242,3 +242,20 @@ a.obj-plovouci, a.obj-plovouci:visited { position: fixed; left: 16px; right: 16p
 .objednat input:not(:placeholder-shown) { font-weight: 600; border-color: var(--navy); }
 /* Mapka Prahy v rohu snímku na mobilu menší. */
 @media (max-width: 600px) { .och-praha { width: 24% !important; min-width: 86px !important; } }
+
+/* Výběr platby (Petr 18. 11. 2026): Apple Pay / Google Pay napřed, když je zařízení umí; pak karta a převod. */
+.obj-k-uhrade { margin: 14px 0 8px !important; font-size: .95rem; }
+.obj-k-uhrade b { font-size: 1.1rem; }
+.pl-volby { display: grid; gap: 10px; }
+.pl-volby .tl { width: 100%; }
+/* Apple Pay: oficiální tlačítko Safari (-apple-pay-button); starší Safari bez něj ukáže černé tlačítko s textem. */
+.pl-apple { display: block; width: 100%; height: 48px; border: 0; border-radius: 0; cursor: pointer; background: #000; color: #fff; font: inherit; font-size: 1rem; }
+@supports (-webkit-appearance: -apple-pay-button) {
+  .pl-apple { -webkit-appearance: -apple-pay-button; -apple-pay-button-type: pay; -apple-pay-button-style: black; }
+  .pl-apple span { display: none; }
+}
+.tl.pl-google { background: #000; color: #fff; font-weight: 500; text-transform: none; letter-spacing: 0; font-size: 1rem; }
+.tl.pl-google b { font-weight: 700; margin-left: .3em; }
+.pl-prevod { background: none; border: 0; padding: 8px 0; font: inherit; font-size: .9rem; color: var(--navy); text-decoration: underline;
+  text-underline-offset: 3px; cursor: pointer; justify-self: center; min-height: 44px; }
+.pl-volby button:disabled { opacity: .6; cursor: progress; }

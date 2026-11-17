@@ -211,3 +211,4 @@ body.bily-report .hlavicka { background: var(--navy); }
 .rp-doplatek .rp-doplatek-souhlas { display: flex; gap: 10px; align-items: flex-start; font-weight: 400; }
 .rp-doplatek .rp-doplatek-souhlas input { margin-top: 4px; width: 18px; height: 18px; flex: none; accent-color: var(--navy); }
 @media (min-width: 640px) { .rp-doplatek { grid-template-columns: 1fr 1fr; } .rp-doplatek .rp-doplatek-souhlas, .rp-doplatek button, .rp-doplatek .rp-doplnit-zprava { grid-column: 1 / -1; } .rp-doplatek button { justify-self: start; } }
+@media (min-width: 640px) { .rp-doplatek .obj-k-uhrade, .rp-doplatek .pl-volby { grid-column: 1 / -1; } .rp-doplatek .pl-volby { max-width: 360px; } .rp-doplatek .pl-volby button { justify-self: stretch; } .rp-doplatek .pl-volby .pl-prevod { justify-self: center; } }

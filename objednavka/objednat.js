@@ -97,12 +97,13 @@
         ${N.predvedeni ? `<p class="obj-zkusebni">Ukázka: nic se neplatí ani neodesílá. Průběh je zrychlený (skutečně do 5, u PLUS do 10 minut) a na konci uvidíte vzorový report ke Karlické 910/49 v Praze 16.</p>`
           : N.zkusebni ? `<p class="obj-zkusebni">Zkušební provoz – platby spustíme v nejbližších dnech. Teď se nic neplatí a report nepřijde.</p>` : ""}
         <p class="obj-souhrn" role="alert"></p>
-        <button class="tl tmave-tl obj-zaplatit" type="submit">${tlText("proverka")}</button>
+        ${N.predvedeni || !window.PLATBA ? `<button class="tl tmave-tl obj-zaplatit" type="submit">${tlText("proverka")}</button>`
+          : `<p class="obj-k-uhrade">K úhradě <b>${kc(N.ceny.proverka)}</b></p>${window.PLATBA.tlacitka()}`}
         <p class="obj-stav-zprava" role="status" aria-live="polite"></p>
         <p class="obj-drobne">Platbu kartou, Apple Pay, Google Pay nebo převodem zajišťuje Comgate. <a href="/podminky.html" target="_blank">Obchodní podmínky</a> · <a href="/osobni-udaje.html" target="_blank">Ochrana osobních údajů</a></p>
       </form>`;
     const f = kontejner.querySelector("form");
-    const tl = f.querySelector(".obj-zaplatit"), zprava = f.querySelector(".obj-stav-zprava"), souhrn = f.querySelector(".obj-souhrn");
+    const tl = f.querySelector(".obj-zaplatit"), uhrada = f.querySelector(".obj-k-uhrade b"), zprava = f.querySelector(".obj-stav-zprava"), souhrn = f.querySelector(".obj-souhrn");
     const plus = f.querySelector(".obj-plus"), navrh = f.querySelector(".obj-navrh");
     const balicek = () => f.balicek.value;
     // Byt po krocích (Petr 15. 11. 2026): číslo bytu; „Číslo nevím“ rozbalí příjmení majitele, patro a souhlas s prověrkou
@@ -124,7 +125,7 @@
       tl.setAttribute("aria-expanded", String(!r.hidden));
       tl.textContent = r.hidden ? "Co přesně dostanu" : "Skrýt";
     }));
-    const prepni = () => { plus.hidden = balicek() !== "plus"; tl.textContent = tlText(balicek()); ukazPlochu(); };
+    const prepni = () => { plus.hidden = balicek() !== "plus"; if (tl) tl.textContent = tlText(balicek()); if (uhrada) uhrada.textContent = kc(N.ceny[balicek()]); ukazPlochu(); };
     f.querySelectorAll("input[name=balicek]").forEach((r) => r.addEventListener("change", prepni));
     // Cena se při psaní formátuje po tisících: 214 414 156 (Petr 13. 11. 2026).
     const cenaPole = f.cena, cislo = (s) => Number(String(s).replace(/\D/g, "")) || 0;
@@ -193,6 +194,7 @@
       return ch;
     };
 
+    const zamkni = (ano) => { if (tl) tl.disabled = ano; if (window.PLATBA) window.PLATBA.zamkni(f, ano); };
     f.addEventListener("submit", async (e) => {
       e.preventDefault();
       f.querySelectorAll(".obj-chybne").forEach((k) => vycisti(k.querySelector("input")));
@@ -217,9 +219,10 @@
         patro: byt && nevimOtevreno() ? f.patro.value.trim() || null : null,
         stav: balicek() === "plus" ? f.stav.value : null,
         // Obrys domu z přehledu zdarma: server ho vrátí stránce průběhu (snímek a mapka Prahy i z odkazu v e-mailu).
+        metoda: window.PLATBA && !N.predvedeni ? window.PLATBA.metoda(e) : null,
         obrys: (() => { try { return JSON.parse(document.getElementById("ochutnavka")?.dataset.obrys || "null"); } catch { return null; } })(),
       };
-      tl.disabled = true; zprava.textContent = N.predvedeni ? "Spouštíme ukázku…" : "Připravujeme platbu…"; zprava.dataset.typ = "";
+      zamkni(true); zprava.textContent = N.predvedeni ? "Spouštíme ukázku…" : "Připravujeme platbu…"; zprava.dataset.typ = "";
       try {
         const r = await fetch(`${N.api}/objednavka`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
         const d = await r.json().catch(() => ({}));
@@ -240,7 +243,7 @@
       } catch (err) {
         zprava.textContent = `${err.message} Zkuste to prosím znovu, nebo napište na info@predkoupi.cz.`;
         zprava.dataset.typ = "chyba";
-        tl.disabled = false;
+        zamkni(false);
       }
     });
   };
