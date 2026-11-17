@@ -19,5 +19,15 @@
     api: predvedeni ? "/predvedeni" : (lokalne && q.get("api")) || (h.startsWith("proverka.") ? "https://api.predkoupi.cz/test" : "https://api.predkoupi.cz"),
     ceny: { proverka: 790, plus: 1390 },
   };
+  // Měření kroků objednávky (Petr 18. 11. 2026): jen počty po dnech, bez cookies a bez ID návštěvníka; každý krok
+  // nejvýš jednou za načtení stránky. V předváděcím průchodu a na vlastním počítači se nic neposílá.
+  const poslane = new Set();
+  const zarizeni = matchMedia("(pointer: coarse)").matches ? "mobil" : "pocitac";
+  window.mer = (krok, detail) => {
+    const d = detail === undefined ? zarizeni : detail || "";
+    if (predvedeni || lokalne || poslane.has(krok + d)) return;
+    poslane.add(krok + d);
+    try { navigator.sendBeacon(`${window.OBJEDNAVKY.api}/udalost`, new Blob([JSON.stringify({ k: krok, d })], { type: "text/plain" })); } catch { /* měření nesmí nic rozbít */ }
+  };
   if (predvedeni) document.write('<script src="/predvedeni/simulace.js?v=2"><\/script>');
 })();

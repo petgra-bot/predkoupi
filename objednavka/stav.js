@@ -292,6 +292,7 @@
 
   function napojDoplatek(o) {
     const f = $("objednavka").querySelector("form.rp-doplatek");
+    if (f) window.mer?.("doplatek_nabidka");
     // Cena se při psaní formátuje po tisících jako v objednávce: 9 990 000 (Petr 18. 11. 2026).
     f?.cena.addEventListener("input", () => {
       const pole = f.cena, pred = pole.value.slice(0, pole.selectionStart).replace(/\D/g, "").length;
@@ -310,6 +311,7 @@
       if (!f.souhlas.checked) { zpr.textContent = "Potvrďte souhlas s obchodními podmínkami."; return; }
       const zamkni = (ano) => f.querySelectorAll("button[type=submit]").forEach((b) => { b.disabled = ano; });
       const metoda = window.PLATBA ? window.PLATBA.metoda(e) : null;
+      window.mer?.("doplatek_zaplatit", metoda || "");
       zamkni(true); zpr.textContent = "";
       try {
         const r = await fetch(`${N.api}/objednavka/${encodeURIComponent(token)}/doplatek`, { method: "POST", headers: { "Content-Type": "application/json" },

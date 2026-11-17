@@ -434,6 +434,7 @@ async function zobrazBudovu(adresa, inz, puvod) {
         data-souhlas="Pošleme jedinou zprávu, až službu rozšíříme do vaší obce, a pak e-mail smažeme. Ukládáme jen e-mail a název obce."
         data-hotovo="až budeme prověřovat i ve vaší obci"></div></div>`);
   mcSlib.then((mc) => { const dd = [...$("vysledek").querySelectorAll("dt")].find((x) => x.textContent === "Městská část")?.nextElementSibling; if (dd) dd.textContent = mc || "–"; });
+  if (!jina) window.mer?.(vPraze ? "prehled" : "mimo_prahu");
   if ($("ochutnavka")) ochutnavka(adresa.so, $("ochutnavka"), { start: puvod.start, obrys: b.obrys, rodinny: !byt, adresa: adresa.text || adresa.adresa || "" });
   $("vysledek").querySelector("[data-znovu]")?.addEventListener("click", () => { const v = $("vstup"); v.value = ""; v.focus(); v.scrollIntoView({ block: "center" }); });
   if ($("objednat")) window.objednavkaFormular($("objednat"), { adresa: adresa.adresa, typ, inz });
@@ -505,6 +506,7 @@ async function overit(e) {
   tlacitko.disabled = true;
   try {
     const text = $("vstup").value.trim();
+    window.mer?.("hledani");
     let url = null;
     try { url = new URL(text); } catch { /* adresa */ }
     if (url) return await overitOdkaz(url);

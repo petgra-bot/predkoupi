@@ -125,7 +125,9 @@
       tl.setAttribute("aria-expanded", String(!r.hidden));
       tl.textContent = r.hidden ? "Co přesně dostanu" : "Skrýt";
     }));
-    const prepni = () => { plus.hidden = balicek() !== "plus"; if (tl) tl.textContent = tlText(balicek()); if (uhrada) uhrada.textContent = kc(N.ceny[balicek()]); ukazPlochu(); };
+    // Měření: došel k objednávce (formulář na obrazovce), zvolil PLUS.
+    try { const io = new IntersectionObserver((z) => { if (z.some((x) => x.isIntersecting)) { window.mer?.("formular"); io.disconnect(); } }, { threshold: 0.3 }); io.observe(f); } catch { /* bez měření */ }
+    const prepni = () => { if (balicek() === "plus") window.mer?.("plus"); plus.hidden = balicek() !== "plus"; if (tl) tl.textContent = tlText(balicek()); if (uhrada) uhrada.textContent = kc(N.ceny[balicek()]); ukazPlochu(); };
     f.querySelectorAll("input[name=balicek]").forEach((r) => r.addEventListener("change", prepni));
     // Cena se při psaní formátuje po tisících: 214 414 156 (Petr 13. 11. 2026).
     const cenaPole = f.cena, cislo = (s) => Number(String(s).replace(/\D/g, "")) || 0;
@@ -200,6 +202,7 @@
       f.querySelectorAll(".obj-chybne").forEach((k) => vycisti(k.querySelector("input")));
       const ch = kontrola();
       if (ch.length) {
+        window.mer?.("zaplatit_chyba");
         ch.forEach(([pole, text], i) => oznac(pole, text, i));
         souhrn.textContent = pocetText(ch.length);
         ch[0][0].focus();
@@ -222,6 +225,7 @@
         metoda: window.PLATBA && !N.predvedeni ? window.PLATBA.metoda(e) : null,
         obrys: (() => { try { return JSON.parse(document.getElementById("ochutnavka")?.dataset.obrys || "null"); } catch { return null; } })(),
       };
+      window.mer?.("zaplatit", data.metoda || "");
       zamkni(true); zprava.textContent = N.predvedeni ? "Spouštíme ukázku…" : "Připravujeme platbu…"; zprava.dataset.typ = "";
       try {
         const r = await fetch(`${N.api}/objednavka`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
