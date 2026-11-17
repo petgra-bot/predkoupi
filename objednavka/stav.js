@@ -77,7 +77,7 @@
               <span class="pr-procenta">0 %</span><span class="pr-cas"></span><div class="pr-pruh"><i></i></div></div>
             <ol class="pr-kroky">${o.faze.map((f, i) => f.zamceno
               ? `<li class="zamceno"><span class="pr-ikona" aria-hidden="true"></span><div><b>${esc(f.nazev)}</b> <span class="pr-zamek">V Prověrce PLUS</span></div></li>`
-              : `<li><span class="pr-ikona" aria-hidden="true"></span>
+              : `<li><span class="pr-ikona" aria-hidden="true"><svg viewBox="0 0 18 18"><path d="M4.5 9.5 L7.8 12.6 L13.8 5.8"/></svg></span>
               <div><b>${esc(f.nazev)}</b><ul class="pr-zpravy">${(ZPRAVY[klic(f, i)] || []).map((z) => `<li>${esc(z)}</li>`).join("")}</ul></div></li>`).join("")}</ol>
             <p class="pr-odejit">Stránku můžete zavřít – report pošleme ${email ? `na <b>${esc(email)}</b>` : "e-mailem"} a uvidíte ho i tady. Zpravidla do ${o.dodani_min} minut.
               ${email ? `<span class="pr-preklep">Překlep v e-mailu? Napište nám na <a href="mailto:info@predkoupi.cz?subject=${encodeURIComponent("Oprava e-mailu, objednávka " + o.cislo)}">info@predkoupi.cz</a>.</span>` : ""}</p>

@@ -51,11 +51,12 @@ h3 { font-size: 0.9375rem; font-weight: 700; letter-spacing: .02em; line-height:
 .lista { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 24px; min-height: 68px; padding-top: 10px; padding-bottom: 10px; }
 .logo { display: flex; flex-direction: column; text-decoration: none; line-height: 1.15; }
 .logo b { white-space: nowrap; font-weight: 800; letter-spacing: .06em; font-size: 0.9375rem; }
+.logo img { display: block; height: 34px; width: auto; margin-bottom: 3px; }   /* logo PK | PŘED KOUPÍ (17. 11. 2026) */
 .logo span { font-size: 0.625rem; letter-spacing: .14em; text-transform: uppercase; color: var(--na-tmave-slabe); }
 .hlavicka nav ul { display: flex; gap: 28px; list-style: none; margin: 0; padding: 0; }
 .hlavicka nav a { font-size: 0.75rem; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; text-decoration: none; color: var(--na-tmave); }
 .hlavicka .tl { min-height: 40px; padding: 0 16px; white-space: nowrap; }
-@media (max-width: 420px) { .hlavicka .tl { padding: 0 12px; letter-spacing: .06em; } .logo span { display: none; } }
+@media (max-width: 420px) { .hlavicka .tl { padding: 0 12px; letter-spacing: .06em; } .logo span { display: none; } .logo img { height: 28px; } }
 @media (max-width: 900px) { .hlavicka nav { display: none; } }
 
 /* Formulář zadání */

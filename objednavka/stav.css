@@ -30,9 +30,13 @@
 .pr-kroky > li.hotovo .pr-ikona { background: var(--zelena-t); border-color: var(--zelena-t); }
 .pr-kroky > li.hotovo .pr-ikona::after { content: ""; position: absolute; left: 4px; top: 1px; width: 5px; height: 9px; border: solid var(--navy); border-width: 0 2px 2px 0; transform: rotate(45deg); }
 .pr-kroky > li.aktivni { color: var(--text-t); }
-.pr-kroky > li.aktivni .pr-ikona { border-color: var(--text-t); border-top-color: transparent; }
-@media (prefers-reduced-motion: no-preference) { .pr-kroky > li.aktivni .pr-ikona { animation: pr-toc .9s linear infinite; } }
-@keyframes pr-toc { to { transform: rotate(360deg); } }
+/* Běžící krok: fajfka z loga se dokola kreslí (Petr 17. 11. 2026; dřív točící se kolečko). Bez pohybu jen stojí. */
+.pr-ikona svg { display: none; position: absolute; inset: -2px; width: 18px; height: 18px; fill: none; stroke: currentColor;
+  stroke-width: 2.4; stroke-linejoin: miter; stroke-dasharray: 16; stroke-dashoffset: 0; }
+.pr-kroky > li.aktivni .pr-ikona { border-color: var(--text-t); }
+.pr-kroky > li.aktivni .pr-ikona svg { display: block; }
+@media (prefers-reduced-motion: no-preference) { .pr-kroky > li.aktivni .pr-ikona svg { animation: pr-fajfka 1.8s ease-in-out infinite; } }
+@keyframes pr-fajfka { 0% { stroke-dashoffset: 16; opacity: 1; } 45% { stroke-dashoffset: 0; } 80% { stroke-dashoffset: 0; opacity: 1; } 100% { stroke-dashoffset: 0; opacity: 0; } }
 .pr-zpravy { list-style: none; margin: 0; padding: 0; display: none; }
 .pr-kroky > li.aktivni .pr-zpravy { display: grid; gap: 4px; margin-top: 8px; }
 .pr-zpravy li { font-size: .88rem; color: var(--slabe-t); padding-left: 18px; position: relative; display: none; }
