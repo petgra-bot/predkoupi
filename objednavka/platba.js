@@ -2,9 +2,9 @@
 // (comgate#709996), proto volbu nabízíme sami a bráně pošleme jen zvolenou metodu (APPLEPAY_REDIRECT atd. – varianta 2
 // v dokumentaci Comgate). Apple Pay jen tam, kde ho zařízení opravdu umí; Google Pay na Androidu mimo vestavěné prohlížeče.
 (() => {
-  // Peněženky dočasně vypnuté (18. 11. 2026, 19:40): Apple Pay na ostré bráně Comgate končí „Platba se nezdařila“
-  // (MZIH-CB4Z-IFJ5). Zapnout zpět na true, až Comgate potvrdí aktivaci Apple Pay a Google Pay pro obchod.
-  const PENEZENKY = false;
+  // Přepínač peněženek (18. 11. 2026): APPLEPAY_REDIRECT na ostré bráně selhával; server teď posílá CARD_CZ_COMGATE,
+  // Apple Pay a Google Pay jsou na stránce karty nahoře. false = jen karta a převod.
+  const PENEZENKY = true;
   const ua = navigator.userAgent;
   const apple = PENEZENKY && (() => { try { return !!(window.ApplePaySession && ApplePaySession.canMakePayments()); } catch { return false; } })();
   const google = PENEZENKY && !apple && /Android/i.test(ua) && !/FBAN|FBAV|Instagram|; wv\)/i.test(ua);
