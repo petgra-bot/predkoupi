@@ -29,5 +29,32 @@
     poslane.add(krok + d);
     try { navigator.sendBeacon(`${window.OBJEDNAVKY.api}/udalost`, new Blob([JSON.stringify({ k: krok, d })], { type: "text/plain" })); } catch { /* měření nesmí nic rozbít */ }
   };
+  // Odkud lidé přišli (Petr 18. 11. 2026, W16a): jen při vstupu z jiného webu nebo přímo (odkaz uvnitř webu se nepočítá),
+  // posílá se jen kategorie zdroje a typ vstupní stránky – žádná adresa odkazu, cookies ani úložiště v prohlížeči.
+  try {
+    const ref = document.referrer ? new URL(document.referrer).hostname.replace(/^www\./, "") : "";
+    if (ref !== h.replace(/^www\./, "")) {
+      const utm = (q.get("utm_source") || "").toLowerCase(), placene = /cpc|ppc|paid|ads/.test((q.get("utm_medium") || "").toLowerCase());
+      const je = (re) => re.test(ref);
+      const zdroj =
+        q.has("gclid") || q.has("gbraid") || q.has("wbraid") || (placene && utm.includes("google")) ? "reklama_google"
+        : q.has("sznclid") || (placene && /seznam|sklik/.test(utm)) ? "reklama_sklik"
+        : je(/(^|\.)(chatgpt\.com|openai\.com|perplexity\.ai|claude\.ai|copilot\.microsoft\.com|gemini\.google\.com)$/) ? "ai"
+        : je(/^(mail\.google\.com|email\.seznam\.cz|outlook\.(live|office)\.com|.*\.mail\..*)$/) ? "email"
+        : je(/(^|\.)google\.[a-z.]+$/) ? "google"
+        : je(/(^|\.)seznam\.cz$/) ? "seznam"
+        : je(/(^|\.)(bing\.com|duckduckgo\.com|search\.brave\.com|ecosia\.org|yahoo\.com)$/) ? "jine_hledani"
+        : je(/(^|\.)(facebook\.com|fb\.com|messenger\.com)$/) ? "facebook"
+        : je(/(^|\.)instagram\.com$/) ? "instagram"
+        : je(/(^|\.)reddit\.com$/) ? "reddit"
+        : je(/(^|\.)(linkedin\.com|lnkd\.in|x\.com|t\.co|twitter\.com)$/) ? "jina_sit"
+        : ref ? "jiny_web" : "primo";
+      const c = location.pathname;
+      const vstup = c === "/" || c === "/index.html" ? "uvod" : c.startsWith("/pruvodce/") ? "pruvodce" : c.startsWith("/vzorov") ? "vzor"
+        : c.startsWith("/dotazy") ? "dotazy" : c.startsWith("/proverit") ? "proverit" : c.startsWith("/objednavka") ? "objednavka" : "jine";
+      window.mer("zdroj", zdroj);
+      window.mer("vstup", vstup);
+    }
+  } catch { /* měření nesmí nic rozbít */ }
   if (predvedeni) document.write('<script src="/predvedeni/simulace.js?v=2"><\/script>');
 })();
