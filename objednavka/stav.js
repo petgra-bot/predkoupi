@@ -204,6 +204,7 @@
           <p class="rp-stitek-nad">Report · ${esc(o.balicek)} · č. ${esc(o.cislo)}</p>
           <h1>${esc(k.nemovitost?.nazev)}</h1>
           ${k.nemovitost?.popis ? `<p class="rp-popis">${esc(k.nemovitost.popis)}</p>` : ""}
+          ${(k.nemovitost?.udaje || []).length ? `<p class="rp-udaje">${k.nemovitost.udaje.filter((u) => u.nazev !== "Typ").map((u) => `${esc(u.nazev)}: <b>${esc(u.hodnota)}</b>`).join(" · ")}</p>` : ""}
         </header>
         ${k.letecky ? `<figure class="rp-snimek"><img src="${N.api}${k.letecky}" alt="Letecký snímek domu" loading="lazy">
           <figcaption>Letecký snímek ČÚZK; oranžově pozemky, bíle dům.</figcaption></figure>` : ""}
@@ -213,7 +214,8 @@
         </div>
         <!-- Přehled hned pod verdiktem, pak cena (Petr 16. 11. 2026, jako PDF) -->
         <section><h2>Přehled</h2><ul class="rp-prehled">${(k.semafor || []).map((s) => `<li class="${esc(s.barva)}">
-          <span class="rp-oblast">${esc(s.oblast)}</span>${stitek(s.barva)}<span class="rp-text">${esc(s.text)}</span></li>`).join("")}</ul></section>
+          <span class="rp-oblast">${esc(s.oblast)}</span>${stitek(s.barva)}<span class="rp-text">${esc(s.text)}</span></li>`).join("")}</ul>
+        ${hodnotaHtml(k)}</section>
         ${doplnitHtml(o)}
         ${k.cena ? `<div class="rp-cena ${esc(k.cena.barva)}"><h2>Odhad ceny <span class="rp-odznak">Prověrka PLUS</span></h2>
           <dl><div><dt>${esc(k.cena.popisek || "Požadovaná cena")}</dt><dd>${esc(k.cena.pozadovana)}</dd></div>
@@ -269,6 +271,17 @@
     }[o.stav];
     $("objednavka").innerHTML = obsah ? obsah() : karta("chyba", "Neznámý stav", "");
   }
+
+  // Co je v pořádku a co jsme prověřili (Petr 18. 11. 2026) – jako v PDF pod přehledem.
+  const hodnotaHtml = (k) => {
+    const pr = k.proverili || {};
+    const tvar = (n, a, b, c) => `${Number(n).toLocaleString("cs-CZ")} ${n === 1 ? a : n >= 2 && n <= 4 ? b : c}`;
+    const ok = (k.v_poradku || []).length
+      ? `<div class="rp-v-poradku"><h3>Co je v pořádku</h3><ul>${k.v_poradku.map((t) => `<li>${esc(t)}</li>`).join("")}</ul></div>` : "";
+    const zdr = pr.zdroju
+      ? `<p class="rp-proverili"><b>Prověřili jsme ${tvar(pr.zdroju, "úřední zdroj", "úřední zdroje", "úředních zdrojů")}${pr.dotazu ? ` (${tvar(pr.dotazu, "dotaz", "dotazy", "dotazů")} do map a registrů)` : ""}:</b> ${esc((pr.nazvy || []).join(", "))}.</p>` : "";
+    return ok + zdr;
+  };
 
   // Report bez konkrétního bytu (Petr 15. 11. 2026): číslo bytu jde do 30 dnů jednou zdarma doplnit.
   const doplnitHtml = (o) => o.doplnit ? `<section class="rp-doplnit"><h2>Zjistili jste číslo bytu?</h2>

@@ -212,3 +212,15 @@ body.bily-report .hlavicka { background: var(--navy); }
 .rp-doplatek .rp-doplatek-souhlas input { margin-top: 4px; width: 18px; height: 18px; flex: none; accent-color: var(--navy); }
 @media (min-width: 640px) { .rp-doplatek { grid-template-columns: 1fr 1fr; } .rp-doplatek .rp-doplatek-souhlas, .rp-doplatek button, .rp-doplatek .rp-doplnit-zprava { grid-column: 1 / -1; } .rp-doplatek button { justify-self: start; } }
 @media (min-width: 640px) { .rp-doplatek .obj-k-uhrade, .rp-doplatek .pl-volby { grid-column: 1 / -1; } .rp-doplatek .pl-volby { max-width: 360px; } .rp-doplatek .pl-volby button { justify-self: stretch; } .rp-doplatek .pl-volby .pl-prevod { justify-self: center; } }
+
+/* Co je v pořádku a co jsme prověřili (18. 11. 2026) */
+.rp-v-poradku { margin-top: 20px; }
+.rp-v-poradku h3 { font-size: 1rem; margin: 0 0 8px; }
+.rp-v-poradku ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px 24px; }
+@media (min-width: 640px) { .rp-v-poradku ul { grid-template-columns: 1fr 1fr; } }
+.rp-v-poradku li { position: relative; padding-left: 22px; }
+.rp-v-poradku li::before { content: "✓"; position: absolute; left: 0; color: var(--zelena, #2e7d32); font-weight: 700; }
+.rp-proverili { margin: 14px 0 0; font-size: .9rem; color: var(--tlumene); }
+.rp-proverili b { color: var(--text, inherit); font-weight: 600; }
+.rp-udaje { margin: 6px 0 0; font-size: .88rem; color: var(--tlumene); }
+.rp-udaje b { font-weight: 600; }

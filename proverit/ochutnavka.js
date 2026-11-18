@@ -180,7 +180,8 @@ function ochutnavkaOblasti(dum, rodinny = true) {
 
 // ---------- zobrazení ----------
 const OCH_ZAMCENE = `
-  <tr class="och-zamceno"><th scope="row">Právní stav</th><td><span class="och-znacka zam">V Prověrce</span></td><td>Věcná břemena, zástavy, exekuce a plomby z výpisu z katastru, insolvence majitele.</td></tr>
+  <tr class="och-zamceno"><th scope="row">Zápisy v katastru</th><td><span class="och-znacka zam">V Prověrce</span></td><td>Věcná břemena, zástavy, exekuce a plomby z výpisu z katastru staženého v den prověrky.</td></tr>
+  <tr class="och-zamceno"><th scope="row">Vlastník</th><td><span class="och-znacka zam">V Prověrce</span></td><td>Insolvence prodávajícího; v Prověrce PLUS navíc evidence exekucí.</td></tr>
   <tr class="och-zamceno"><th scope="row">Co udělat</th><td><span class="och-znacka zam">V Prověrce</span></td><td>Verdikt jednou větou a úkoly na míru před rezervací, podpisem a převodem.</td></tr>
   <tr class="och-zamceno och-cena"><th scope="row">Cena</th><td><span class="och-znacka zam">V Prověrce PLUS</span></td><td>Odhad ze skutečných prodejů v domě a okolí (katastr) proti ceně v inzerátu – víte, jestli nepřeplácíte.</td></tr>`;
 
