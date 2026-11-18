@@ -305,3 +305,5 @@ h2.h3 { font-size: 0.9375rem; font-weight: 700; letter-spacing: .02em; line-heig
 .vzor-cast { display: grid; grid-template-columns: 1fr; gap: 24px; margin: 28px 0; }
 @media (min-width: 760px) { .vzor-cast { grid-template-columns: 1.1fr 1fr; align-items: start; } }
 .vzor-cast img { width: 100%; height: auto; border: 1px solid var(--linka); box-shadow: 0 18px 40px rgba(8,12,30,.12); }
+.clanek .odkaz-dal { font-weight: 600; margin-left: 12px; }
+.nadpis-plus { margin-top: 64px !important; padding-top: 28px; border-top: 2px solid var(--navy); }
