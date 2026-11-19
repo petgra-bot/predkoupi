@@ -197,7 +197,7 @@ footer .spodek { border-top: 1px solid var(--linka-tmava); margin-top: 36px; pad
 @media (max-width: 760px) { footer .sloupce { grid-template-columns: 1fr 1fr; } footer .sloupce > div:first-child { grid-column: 1 / -1; } }
 
 /* Podstránky a odkazy dál */
-.h1-podstranka { font-size: clamp(2rem, 4.6vw, 3.25rem); margin-top: 12px; }
+.h1-podstranka { font-size: clamp(2rem, 4.6vw, 3.25rem); margin-top: 12px; hyphens: manual; }
 .dale { margin-top: 20px; }
 .priklady li { display: flex; flex-direction: column; }
 .priklady .dale { margin-top: auto; padding-top: 14px; }
