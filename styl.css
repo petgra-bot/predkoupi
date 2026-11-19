@@ -199,6 +199,9 @@ footer .spodek { border-top: 1px solid var(--linka-tmava); margin-top: 36px; pad
 /* Podstránky a odkazy dál */
 .h1-podstranka { font-size: clamp(2rem, 4.6vw, 3.25rem); margin-top: 12px; }
 .dale { margin-top: 20px; }
+.priklady li { display: flex; flex-direction: column; }
+.priklady .dale { margin-top: auto; padding-top: 14px; }
+.kroky-radou .c { display: block; font-size: 2rem; font-weight: 300; color: #8a90a6; line-height: 1; margin-bottom: 14px; }
 .dale a { font-size: 0.75rem; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; text-decoration: underline; text-underline-offset: 4px; }
 .dalsi-krok { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 24px; }
 .dalsi-krok p { font-size: clamp(1.25rem, 2.4vw, 1.625rem); font-weight: 700; max-width: 30ch; }
