@@ -153,8 +153,12 @@ async function budovyUBodu(lat, lon, metru) {
 
 async function adresyVUlici(ulice, obec, cast) {
   const sql = (s) => String(s).replace(/'/g, "''");
-  // UPPER: inzeráty píšou „Pod Pekárnami“, RÚIAN „Pod pekárnami“ (snímek inzerátu, 20. 11. 2026).
-  const vse = await adresniMista(`UPPER(adresa) like '${sql(ulice.toUpperCase())} %' and adresa like '%${sql(obec || "Praha")}%'`);
+  const najdi = (u) => adresniMista(`adresa like '${sql(u)} %' and adresa like '%${sql(obec || "Praha")}%'`);
+  let vse = await najdi(ulice);
+  // Inzeráty píšou „Pod Pekárnami“, RÚIAN „Pod pekárnami“ (snímek inzerátu, 20. 11. 2026). UPPER() v dotazu
+  // prohledá celou tabulku a služba ČÚZK pak vrací chybu 500, proto druhý pokus s malými písmeny za prvním slovem.
+  const mala = ulice.replace(/^(\S+\s)(.*)$/, (_, prvni, zbytek) => prvni + zbytek.toLowerCase());
+  if (!vse.length && mala !== ulice) vse = await najdi(mala);
   const vCasti = cast ? vse.filter((a) => a.adresa.includes(`, ${cast},`)) : [];
   return (vCasti.length ? vCasti : vse).filter((a) => naUlici(a.adresa, ulice));
 }
