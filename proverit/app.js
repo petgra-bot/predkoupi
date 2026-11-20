@@ -539,13 +539,15 @@ function nabidniSnimek(url) {
   window.mer?.("snimek_nabidka");
   const sreality = url.hostname.endsWith("sreality.cz");
   $("vysledek").innerHTML = karta("upresnit", "Pošlete snímek inzerátu",
-    `<p>${sreality ? "Sreality nám adresu přečíst nedovolí." : "Inzerát se nepodařilo přečíst."} Udělejte snímek obrazovky
+    `<p>${sreality ? "Sreality nám inzerát přečíst nedovolí, z odkazu známe jen ulici nebo obec." : "Inzerát se nepodařilo přečíst."} Udělejte snímek obrazovky
     inzerátu a&nbsp;vyberte ho tady. Nejvíc pomůže nadpis, tabulka údajů a&nbsp;mapa se špendlíkem – klidně na 2–3 snímcích.</p>
     <label class="snimek-pole" id="snimek-pole">
       <input type="file" id="snimek-soubor" accept="image/*" multiple class="snimek-vstup">
       <span class="snimek-tl">Vybrat snímky</span>
       <span class="snimek-napoveda">nebo sem snímek přetáhněte či vložte (Ctrl+V)</span>
     </label>
+    <p class="snimek-schranka" hidden><button type="button" class="snimek-vlozit" id="snimek-vlozit">Vložit zkopírovaný snímek</button></p>
+    <p class="snimek-hlaska" id="snimek-hlaska" role="status"></p>
     <p class="tlumene">Ze snímku čteme jen údaje o&nbsp;nemovitosti, snímek neukládáme. Dům pak potvrdíte na mapě.</p>
     <p><button type="button" class="odkaz" id="bez-snimku">Pokračovat bez snímku</button></p>`);
   const vstup = $("snimek-soubor"), pole = $("snimek-pole");
@@ -560,6 +562,45 @@ function nabidniSnimek(url) {
   pole.addEventListener("dragleave", () => pole.classList.remove("nad"));
   pole.addEventListener("drop", (e) => { e.preventDefault(); pole.classList.remove("nad"); posli(e.dataTransfer.files); });
   $("bez-snimku").addEventListener("click", () => { document.removeEventListener("paste", vlozeni); bezSnimku(url).catch(chyba); });
+  // iPhone a iPad: snímek obrazovky → „Kopírovat“ → tady „Vložit“ (Petr 20. 11. 2026). Safari se zeptá bublinou „Vložit“.
+  if (navigator.clipboard?.read) {
+    $("snimek-vlozit").parentElement.hidden = false;
+    const hlaska = (s) => { $("snimek-hlaska").textContent = s; };
+    $("snimek-vlozit").addEventListener("click", async () => {
+      try {
+        const soubory = [];
+        for (const pol of await navigator.clipboard.read()) {
+          const typ = pol.types.find((x) => x.startsWith("image/"));
+          if (typ) soubory.push(new File([await pol.getType(typ)], "snimek", { type: typ }));
+        }
+        if (soubory.length) posli(soubory);
+        else hlaska("Ve schránce není obrázek. Udělejte snímek obrazovky, zvolte Kopírovat a zkuste to znovu.");
+      } catch {
+        hlaska("Vložení ze schránky prohlížeč nepovolil. Vyberte prosím snímek tlačítkem výše.");
+      }
+    });
+  }
+}
+
+// Místo z adresy odkazu (ulice, část obce, obec) – doplní snímek, na kterém místo chybí (Jezevčí, Šeberov, 20. 11. 2026).
+async function mistoZOdkazu(url) {
+  const lok = lokalitaZOdkazu(url);
+  if (!lok?.lokalita) return {};
+  const kand = await geokoduj(lok.lokalita, 10).catch(() => []);
+  const obecAdresy = (a) => a.split(",").pop().replace(/^\s*\d{3}\s?\d{2}\s+/, "").replace(/\s+\d+$/, "");
+  const am = kand.find((c) => c.attributes.Type === "AdresniMisto" && !/^č\.\s?[pe]\./.test(c.address)
+    && bezDiakritiky(lok.lokalita).includes(bezDiakritiky(obecAdresy(c.address))));
+  if (!am) {
+    const o = kand.find((c) => ["Obec", "CastObce"].includes(c.attributes.Type));
+    return o ? { obec: o.address } : {};
+  }
+  const casti = am.address.split(",").map((s) => s.trim());
+  const ulice = casti[0].replace(/\s+\d+(\/\d+\w?)?$/, "");
+  return {
+    obec: /Praha/.test(am.address) ? "Praha" : obecAdresy(am.address),
+    cast: casti.length >= 3 ? casti[1] : null,
+    ulice: !lok.bezUlice && bezDiakritiky(lok.lokalita).includes(bezDiakritiky(ulice)) ? ulice : null,
+  };
 }
 
 // Zmenšit na nejvýš 1600 px a převést na JPEG: rychlejší nahrání z mobilu a snímek bez EXIF údajů.
@@ -604,6 +645,9 @@ async function domZeSnimku(d, url) {
     return;
   }
   nacitam("Hledám dům v registru adres a katastru…");
+  // Co na snímku chybí, doplní adresa odkazu (snímek jen s mapou má ulici u špendlíku, ale ne obec).
+  const odk = !d.obec || !(d.ulice || d.ulice_u_spendliku) ? await mistoZOdkazu(url) : {};
+  d = { ...d, obec: d.obec || odk.obec, cast_obce: d.cast_obce || odk.cast, ulice: d.ulice || (d.ulice_u_spendliku ? null : odk.ulice) };
   const inz = { typ: d.typ, dispozice: d.dispozice, plocha_m2: d.plocha_m2, patro: d.podlazi_bytu, podlazi_budovy: d.podlazi_celkem,
     pozemek_m2: d.pozemek_m2, cena_kc: d.cena_kc, portal: url.hostname.replace(/^www\./, ""), ulice: d.ulice || d.ulice_u_spendliku };
   const obec = d.obec === "Praha" || /^Praha\b/.test(d.obec || "") ? "Praha" : d.obec;
@@ -623,7 +667,8 @@ async function domZeSnimku(d, url) {
   const kody = [...new Set(adresy.map((a) => a.so))].filter(Boolean);
   for (let i = 0; i < kody.length; i += 100) Object.assign(b, await budovy(kody.slice(i, i + 100)));
   const cisloText = [d.cislo_orientacni, d.cislo_popisne].filter((x) => x != null).map(String);
-  const uSpendliku = new Set((d.presny_spendlik ? d.cisla_u_spendliku || [] : []).map((x) => String(x).trim()));
+  // Čísla u špendlíku čte AI z mapy a nejbližší občas splete (Jezevčí: dům pod špendlíkem nemá číslo vidět) → slabší váha.
+  const spendlik = (d.presny_spendlik ? d.cisla_u_spendliku || [] : []).map((x) => String(x).trim());
   const podleBudovy = new Map();
   for (const a of adresy) {
     const bud = b[a.so];
@@ -638,7 +683,8 @@ async function domZeSnimku(d, url) {
       else if (r <= 0.08) skore += 1;
       else if (r > 0.25) skore -= 2;
     }
-    if (cisla.some((c) => uSpendliku.has(c))) { skore += 4; duvody.push("číslo domu u špendlíku na mapě"); }
+    if (spendlik.length && cisla.includes(spendlik[0])) { skore += 3; duvody.push("číslo domu u špendlíku na mapě"); }
+    else if (cisla.some((c) => spendlik.includes(c))) skore += 1;
     const pred = podleBudovy.get(a.so);
     if (!pred || skore > pred.skore) podleBudovy.set(a.so, { ...a, skore, duvody: pred ? [...new Set([...pred.duvody, ...duvody])] : duvody });
   }

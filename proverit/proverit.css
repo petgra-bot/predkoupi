@@ -272,3 +272,10 @@ a.obj-plovouci, a.obj-plovouci:visited { position: fixed; left: 16px; right: 16p
 button.odkaz { font: inherit; color: inherit; background: none; border: 0; padding: 4px 0; text-decoration: underline; cursor: pointer; touch-action: manipulation; }
 .snimek-vstup { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; clip-path: inset(50%); }
 .snimek-pole { position: relative; }
+.snimek-schranka { margin: -4px 0 12px; }
+.snimek-vlozit { font: 600 .75rem "Montserrat", sans-serif; text-transform: uppercase; letter-spacing: .08em; color: var(--text-t);
+  background: transparent; border: 1px solid rgba(255,255,255,.45); padding: 12px 18px; min-height: 44px; width: 100%; cursor: pointer; touch-action: manipulation; }
+@media (hover: hover) and (pointer: fine) { .snimek-vlozit:hover { background: rgba(255,255,255,.08); } }
+.snimek-vlozit:active { transform: scale(.98); }
+.snimek-hlaska:empty { display: none; }
+.snimek-hlaska { color: var(--oranzova-t); font-size: .9rem; }
