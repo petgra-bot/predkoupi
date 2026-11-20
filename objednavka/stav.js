@@ -153,6 +153,7 @@
     if (!c) return "";
     const o = c.odhad_pro_byt, v = c.vyjednavani, z = c.zajimavosti || {}, vety = [];
     const kde = c.rozsah === "okoli" ? `v sousedních domech do ${c.okruh_m || 300} m` : "v domě";
+    if (c.vypadek_okoli && !c.odhad_pro_byt) return `<div class="rp-cena-kn"><p>Prodeje v sousedních domech se teď z katastru nepodařilo načíst (výpadek služby katastru). Odhad ceny doplníme a pošleme vám e-mailem; když to nepůjde, příplatek za Prověrku PLUS vrátíme.</p></div>`;
     if (c.vratit_priplatek) return `<div class="rp-cena-kn"><p>V domě ani v sousedních domech do 300 m nebyly za posledních 5 let aspoň 3 prodeje bytů se známou plochou, odhad ceny proto nedáváme. <b>Příplatek za Prověrku PLUS vám vrátíme.</b></p></div>`;
     if (c.rozsah === "okoli") vety.push(`Odhad vychází z prodejů ${kde} – v samotném domě se za 5 let neprodalo dost bytů.`);
     if (z.stejny_typ?.nejblizsi) { const n = z.stejny_typ.nejblizsi; const [y, m, d] = String(n.datum).split("-");
