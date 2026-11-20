@@ -129,10 +129,17 @@ function ochutnavkaOblasti(dum, rodinny = true) {
   const stred = ochStred(dum);
   const radek = (oblast, barva, text) => ({ oblast, barva, stav: OCH_STAV[barva], text });
   const povodne = (async () => {
-    const [d100, d2002, akt] = await Promise.all([ochVzdalenostKVrstve(`${OCH.ZAPLAVY}/9`, dum, 300),
-      ochVzdalenostKVrstve(`${OCH.ZAPLAVY}/10`, dum, 300), ochPocet(`${OCH.ZAPLAVY}/18`, dum).catch(() => 0)]);
-    if (akt > 0 || d100 === 0) return radek("Povodně", "cervena", "Dům leží v záplavovém území stoleté vody" + (akt > 0 ? " (aktivní zóna)." : "."));
+    // Stejná pravidla jako placený report (povodne_hluk.py, D12 20. 11. 2026): ochrana městem → oranžová, hranice stoleté
+    // vody do 50 m → oranžová (výšku domu nad hladinou ověří až Prověrka).
+    const [d100, d2002, akt, chraneno] = await Promise.all([ochVzdalenostKVrstve(`${OCH.ZAPLAVY}/9`, dum, 300),
+      ochVzdalenostKVrstve(`${OCH.ZAPLAVY}/10`, dum, 300), ochPocet(`${OCH.ZAPLAVY}/18`, dum).catch(() => 0),
+      ochVolej(`${OCH.ZAPLAVY}/19/query`, { where: "KATEG=4", returnCountOnly: true, ...ochGeom(dum) }).then((x) => (x.count || 0) > 0).catch(() => false)]);
+    if (akt > 0) return radek("Povodně", "cervena", "Dům leží v aktivní zóně záplavového území.");
+    if (d100 === 0) return chraneno
+      ? radek("Povodně", "oranzova", "Dům leží v záplavovém území stoleté vody, území chrání protipovodňová opatření města.")
+      : radek("Povodně", "cervena", "Dům leží v záplavovém území stoleté vody.");
     if (d2002 === 0) return radek("Povodně", "oranzova", "Dům je mimo stoletou vodu, ale v rozlivu povodně 2002" + (d100 ? ` (stoletá voda ${Math.round(d100)} m).` : "."));
+    if (d100 !== null && d100 <= 50) return radek("Povodně", "oranzova", `Hranice stoleté vody ${Math.round(d100)} m od domu; výšku domu nad hladinou ověříme v Prověrce.`);
     return radek("Povodně", "zelena", "Mimo záplavové území" + (d100 ? `, hranice stoleté vody ${Math.round(d100)} m od domu.` : ", hranice dál než 300 m."));
   })();
   const hluk = (async () => {
