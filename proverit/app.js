@@ -486,12 +486,14 @@ async function overitOdkaz(url) {
   // Sreality automatické čtení zakazují (robots.txt), skript na Cloudflaru je proto nečte.
   const inz = url.hostname.endsWith("sreality.cz") ? null : await nactiInzerat(url.href).catch((err) => { console.warn(err); return null; });
   if (inz) return zpracujInzerat(inz);
-  // Portál čtení nedovolí (Sreality): nejdřív nabídneme snímek inzerátu (varianta A, Petr 20. 11. 2026),
-  // bez snímku zůstává dřívější cesta (ulice nebo obec z adresy odkazu a výběr na mapě).
-  return nabidniSnimek(url);
+  // Portál čtení nedovolí (Sreality): nejdřív ulice nebo obec z adresy odkazu. Snímek inzerátu jen tam, kde odkaz
+  // nestačí – jen obec, nebo víc než 3 domy (Petr 20. 11. 2026 po zkoušce Aubrechtové: snímek předem byl krok navíc).
+  return bezSnimku(url);
 }
 
-async function bezSnimku(url) {
+async function bezSnimku(url, bezNabidky = false) {
+  const nabidka = (text) => bezNabidky ? "" : `<p><button type="button" class="odkaz" id="nabidka-snimku">${text}</button></p>`;
+  const napojNabidku = () => $("nabidka-snimku")?.addEventListener("click", () => nabidniSnimek(url));
   nacitam("Hledám ulici z odkazu…");
   const lok = lokalitaZOdkazu(url);
   const kand = lok?.lokalita ? (await geokoduj(lok.lokalita, 10)) : [];
@@ -509,8 +511,16 @@ async function bezSnimku(url) {
     adresy.forEach((a) => { a.vzdalenost = null; });
     const poradi = (await ohodnot(adresy, inzOdkaz)).filter((x) => x.skore > 0);
     if (poradi.length === 1) return zobrazBudovu(poradi[0], inzOdkaz, { jak: "jediný dům v ulici, který sedí typem", jistota: "střední" });
-    if (poradi.length) return vyberNaMape(poradi, [],
-      `${url.hostname.endsWith("sreality.cz") ? "Sreality nedovolují inzerát přečíst automaticky" : "Inzerát se teď nepodařilo přečíst"}, z odkazu známe jen ${lok.bezUlice ? "část obce" : "ulici"} ${esc(nazev)}.`, inzOdkaz);
+    if (poradi.length) {
+      await vyberNaMape(poradi, [],
+        `${url.hostname.endsWith("sreality.cz") ? "Sreality nedovolují inzerát přečíst automaticky" : "Inzerát se teď nepodařilo přečíst"}, z odkazu známe jen ${lok.bezUlice ? "část obce" : "ulici"} ${esc(nazev)}.`, inzOdkaz);
+      const domu = new Set(poradi.map((x) => x.so)).size;
+      if (domu > 3 && !bezNabidky) {   // u víc domů může pomoct tabulka inzerátu (podlaží „X z Y“, zastavěná plocha)
+        $("mapa")?.insertAdjacentHTML("beforebegin", nabidka("Zúžit výběr snímkem inzerátu"));
+        napojNabidku();
+      }
+      return;
+    }
   }
   // Bez ulice (obce bez ulic, inzerát s „Lokalita je pouze orientační“): řekneme aspoň, co z odkazu víme (Petr 20. 11. 2026).
   // Přednost má adresní místo („Novosedly 8, 38101 Kájov“ → „Novosedly, Kájov“), pak obec nebo část obce, katastr až nakonec.
@@ -525,10 +535,13 @@ async function bezSnimku(url) {
   if (m) {
     const proc = url.hostname.endsWith("sreality.cz") ? "Sreality nedovolují inzerát přečíst automaticky a&nbsp;v&nbsp;odkazu" : "Inzerát se nepodařilo přečíst a&nbsp;v&nbsp;odkazu";
     $("vysledek").innerHTML = karta("upresnit", `Z odkazu známe jen místo: ${esc(m.misto)}`,
-      `<p>${proc} je jen ${esc(m.misto)}, bez ulice a čísla domu. Zadejte prosím adresu do pole nahoře, například „${esc(m.priklad)}“. Číslo domu bývá v&nbsp;inzerátu na mapě, jinak vám ho sdělí makléř nebo prodávající.</p>`);
+      `<p>${proc} je jen ${esc(m.misto)}, bez ulice a čísla domu. Zadejte prosím adresu do pole nahoře, například „${esc(m.priklad)}“. Číslo domu bývá v&nbsp;inzerátu na mapě, jinak vám ho sdělí makléř nebo prodávající.</p>
+      ${nabidka("Nebo pošlete snímek inzerátu – ukážeme domy, které mu odpovídají")}`);
+    napojNabidku();
     return;
   }
-  $("vysledek").innerHTML = karta("upresnit", "Z odkazu nejde vyčíst adresu", `<p>${BEZ_ULICE}</p>`);
+  $("vysledek").innerHTML = karta("upresnit", "Z odkazu nejde vyčíst adresu", `<p>${BEZ_ULICE}</p>${nabidka("Poslat snímek inzerátu")}`);
+  napojNabidku();
 }
 
 // ---------- Snímek inzerátu (varianta A, Petr 20. 11. 2026; test na 23 inzerátech v docs/sreality-test.md) ----------
@@ -561,7 +574,7 @@ function nabidniSnimek(url) {
   pole.addEventListener("dragover", (e) => { e.preventDefault(); pole.classList.add("nad"); });
   pole.addEventListener("dragleave", () => pole.classList.remove("nad"));
   pole.addEventListener("drop", (e) => { e.preventDefault(); pole.classList.remove("nad"); posli(e.dataTransfer.files); });
-  $("bez-snimku").addEventListener("click", () => { document.removeEventListener("paste", vlozeni); bezSnimku(url).catch(chyba); });
+  $("bez-snimku").addEventListener("click", () => { document.removeEventListener("paste", vlozeni); bezSnimku(url, true).catch(chyba); });
   // iPhone a iPad: snímek obrazovky → „Kopírovat“ → tady „Vložit“ (Petr 20. 11. 2026). Safari se zeptá bublinou „Vložit“.
   if (navigator.clipboard?.read) {
     $("snimek-vlozit").parentElement.hidden = false;
@@ -603,21 +616,29 @@ async function mistoZOdkazu(url) {
   };
 }
 
-// Zmenšit na nejvýš 1600 px a převést na JPEG: rychlejší nahrání z mobilu a snímek bez EXIF údajů.
-async function zmensi(soubor) {
+// Snímek → díly JPEG o šířce nejvýš 1 000 px a poměru nejvýš 1 : 1,5 (rychlé nahrání z mobilu, bez EXIF). Snímek celé
+// stránky z iPhonu (poměr 1 : 15) se zmenšený do jednoho obrázku nedal přečíst – AI pak hádala (Aubrechtové, 20. 11. 2026).
+const DILU_MAX = 8;
+async function dily(soubor) {
   const bmp = await createImageBitmap(soubor);
-  const k = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
-  const c = document.createElement("canvas");
-  c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
-  c.getContext("2d").drawImage(bmp, 0, 0, c.width, c.height);
-  return new Promise((ok) => c.toBlob(ok, "image/jpeg", 0.85));
+  const k = Math.min(1, 1000 / bmp.width);
+  const sirka = Math.round(bmp.width * k), vyska = Math.round(bmp.height * k), krok = Math.round(sirka * 1.5);
+  const vysledek = [];
+  for (let y = 0; y < vyska && vysledek.length < DILU_MAX; y += krok) {
+    const c = document.createElement("canvas");
+    c.width = sirka; c.height = Math.min(krok, vyska - y);
+    c.getContext("2d").drawImage(bmp, 0, y / k, bmp.width, c.height / k, 0, 0, c.width, c.height);
+    vysledek.push(await new Promise((ok) => c.toBlob(ok, "image/jpeg", 0.85)));
+  }
+  return vysledek;
 }
 
 async function zpracujSnimky(soubory, url) {
   window.mer?.("snimek_poslan");
   nacitam(`Čtu ${soubory.length > 1 ? "snímky" : "snímek"} inzerátu…`);
   const fd = new FormData();
-  for (const s of soubory) fd.append("snimky", await zmensi(s), "snimek.jpg");
+  let pocet = 0;
+  for (const s of soubory) for (const d of await dily(s)) if (pocet++ < DILU_MAX) fd.append("snimky", d, "snimek.jpg");
   const r = await fetch(`${window.OBJEDNAVKY?.api || "https://api.predkoupi.cz"}/inzerat/snimek`, { method: "POST", body: fd });
   const data = await r.json().catch(() => ({}));
   if (!r.ok) {
@@ -625,7 +646,7 @@ async function zpracujSnimky(soubory, url) {
       `<p>${esc(data.detail || "Zkuste to prosím znovu, nebo zadejte adresu do pole nahoře.")}</p>
       <p><button type="button" class="odkaz" id="znovu-snimek">Poslat jiný snímek</button> · <button type="button" class="odkaz" id="bez-snimku">Pokračovat bez snímku</button></p>`);
     $("znovu-snimek").addEventListener("click", () => nabidniSnimek(url));
-    $("bez-snimku").addEventListener("click", () => bezSnimku(url).catch(chyba));
+    $("bez-snimku").addEventListener("click", () => bezSnimku(url, true).catch(chyba));
     return;
   }
   return domZeSnimku(data, url);
@@ -683,6 +704,11 @@ async function domZeSnimku(d, url) {
     if (!bud) continue;
     const cisla = cislaAdresy(a.adresa);
     let skore = shodaSInzeratem(bud, inz);
+    // „X. podlaží z Y“ dům často rozhodne (Aubrechtové: domy se 7, 10 a 13 podlažími); RÚIAN občas počítá i suterén.
+    if (d.podlazi_celkem && bud.pocetpodlazi) {
+      const rozdil = Math.abs(bud.pocetpodlazi - d.podlazi_celkem);
+      skore += rozdil === 0 ? 2 : rozdil === 1 ? 1 : rozdil >= 3 ? -2 : 0;
+    }
     const duvody = [];
     if (cisloText.length && (!inz.ulice || naUlici(a.adresa, inz.ulice)) && cisla.some((c) => cisloText.includes(c))) { skore += 10; duvody.push("číslo domu z textu inzerátu"); }
     if (d.zastavena_plocha_m2 && bud.zastavenaplocha) {
