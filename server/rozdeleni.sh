@@ -87,6 +87,11 @@ set -uo pipefail
 aktualizuj() {  # $1 složka, $2 větev, $3 služba API
   cd "$1" || return
   local pred po
+  # Běží prověrka (zámek agenta)? Neaktualizovat uprostřed běhu – skripty by se spouštěly napůl ze staré a napůl z nové
+  # verze (kontrola kódu T18, 20. 11. 2026). Za 10 minut to zkusí znovu.
+  if [ -e nemo/.cache/agent.lock ] && ! flock -n nemo/.cache/agent.lock true; then
+    echo "$3: běží prověrka, aktualizace později"; return
+  fi
   pred=$(sudo -u nemo git rev-parse HEAD)
   sudo -u nemo git fetch -q origin "$2" && sudo -u nemo git reset -q --hard "origin/$2" || return
   po=$(sudo -u nemo git rev-parse HEAD)
