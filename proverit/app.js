@@ -647,13 +647,21 @@ async function domZeSnimku(d, url) {
   nacitam("Hledám dům v registru adres a katastru…");
   // Co na snímku chybí, doplní adresa odkazu (snímek jen s mapou má ulici u špendlíku, ale ne obec).
   const odk = !d.obec || !(d.ulice || d.ulice_u_spendliku) ? await mistoZOdkazu(url) : {};
-  d = { ...d, obec: d.obec || odk.obec, cast_obce: d.cast_obce || odk.cast, ulice: d.ulice || (d.ulice_u_spendliku ? null : odk.ulice) };
+  const typOdkazu = lokalitaZOdkazu(url)?.typ;
+  d = { ...d, typ: d.typ || (["byt", "dum"].includes(typOdkazu) ? typOdkazu : null), obec: d.obec || odk.obec, cast_obce: d.cast_obce || odk.cast, ulice: d.ulice || (d.ulice_u_spendliku ? null : odk.ulice) };
   const inz = { typ: d.typ, dispozice: d.dispozice, plocha_m2: d.plocha_m2, patro: d.podlazi_bytu, podlazi_budovy: d.podlazi_celkem,
     pozemek_m2: d.pozemek_m2, cena_kc: d.cena_kc, portal: url.hostname.replace(/^www\./, ""), ulice: d.ulice || d.ulice_u_spendliku };
   const obec = d.obec === "Praha" || /^Praha\b/.test(d.obec || "") ? "Praha" : d.obec;
   const sql = (s) => String(s).replace(/'/g, "''");
   let adresy = [];
   if (inz.ulice && obec) adresy = await adresyVUlici(inz.ulice, obec, d.cast_obce);
+  if (!adresy.length && inz.ulice) {   // AI ulici občas přečte s chybou („Ježevčí“) → ulice z adresy odkazu
+    const zOdkazu = odk.ulice !== undefined ? odk : await mistoZOdkazu(url);
+    if (zOdkazu.ulice && zOdkazu.ulice !== inz.ulice) {
+      adresy = await adresyVUlici(zOdkazu.ulice, zOdkazu.obec || obec, zOdkazu.cast || d.cast_obce);
+      if (adresy.length) inz.ulice = zOdkazu.ulice;
+    }
+  }
   if (!adresy.length && (d.cast_obce || obec)) {
     const misto = d.cast_obce && d.cast_obce !== obec ? d.cast_obce : obec;
     adresy = (await adresniMista(`adresa like '%${sql(misto)}%'${obec && misto !== obec ? ` and adresa like '%${sql(obec)}%'` : ""}`)).slice(0, 800);
@@ -694,7 +702,7 @@ async function domZeSnimku(d, url) {
   const cteno = [TYP_INZERATU[d.typ] || null, d.dispozice, d.plocha_m2 && `${d.plocha_m2.toLocaleString("cs-CZ")} m²`,
     d.podlazi_bytu && `${d.podlazi_bytu}. podlaží${d.podlazi_celkem ? ` z ${d.podlazi_celkem}` : ""}`,
     d.zastavena_plocha_m2 && `zastavěná plocha ${d.zastavena_plocha_m2.toLocaleString("cs-CZ")} m²`, d.pozemek_m2 && `pozemek ${d.pozemek_m2.toLocaleString("cs-CZ")} m²`,
-    [d.ulice || d.ulice_u_spendliku, d.cast_obce, obec].filter(Boolean).join(", ")].filter(Boolean).join(" · ");
+    [inz.ulice, d.cast_obce, obec].filter(Boolean).join(", ")].filter(Boolean).join(" · ");
   const uvod = `Ze snímku: ${esc(cteno)}. ${kandidati.length === 1 ? "Podle katastru sedí jeden dům – potvrďte ho prosím."
     : `Podle katastru sedí nejlépe ${kandidati.length} ${kandidati.length < 5 ? "domy" : "domů"} – vyberte ten z inzerátu.`}`;
   return vyberNaMape(poradi.slice(0, 120), kandidati, uvod, inz);
