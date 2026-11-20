@@ -448,13 +448,14 @@ function chyba(err) {
   $("vysledek").innerHTML = karta("chyba", "Něco se nepovedlo", `<p>${esc(err.message)}. Zkuste to prosím znovu, případně zadejte adresu.</p>`);
 }
 
-const BEZ_ULICE = `Z odkazu nejde vyčíst ani ulici. Zadejte prosím adresu nemovitosti, sdělí vám ji makléř nebo prodávající.`;
+const BEZ_ULICE = `V odkazu není obec ani ulice. Zadejte prosím adresu nemovitosti do pole nahoře, sdělí vám ji makléř nebo prodávající.`;
 
 // Odkaz na portál bez skriptu na Cloudflaru: aspoň typ a ulice z adresy odkazu.
 function lokalitaZOdkazu(u) {
   const cesta = decodeURIComponent(u.pathname).split("/").filter(Boolean);
   if (u.hostname.endsWith("sreality.cz") && cesta[0] === "detail")  // /detail/prodej/byt/2+1/praha-zabehlice-postupicka/<id>
-    return { typ: cesta[2], dispozice: cesta[3] !== "rodinny" ? cesta[3] : null, lokalita: (cesta[4] || "").replace(/-/g, " ").trim() };
+    return { typ: cesta[2], dispozice: cesta[3] !== "rodinny" ? cesta[3] : null, lokalita: (cesta[4] || "").replace(/-/g, " ").trim(),
+      bezUlice: (cesta[4] || "").endsWith("-") };   // „krepice-krepice-“: obec a část obce, ulice prázdná
   if (u.hostname.endsWith("idnes.cz") && cesta[0] === "detail")  // /detail/prodej/byt/praha-6-lindleyova/<id>/
     return { typ: cesta[2], dispozice: null, lokalita: (cesta[3] || "").replace(/-/g, " ").replace(/^praha \d+ /, "praha ").trim() };
   return null;
@@ -484,18 +485,36 @@ async function overitOdkaz(url) {
   const kand = lok?.lokalita ? (await geokoduj(lok.lokalita, 10)) : [];
   // Adresa v ulici má tvar „Ulice 12/3, Část obce, PSČ Obec“; bez ulice jen „Část obce 123, PSČ Obec“.
   const nazevUlice = (c) => c.address.split(",")[0].replace(/\s+\d+(\/\d+\w?)?$/, "");
-  const ulice = kand.find((c) => c.attributes.Type === "AdresniMisto" && c.address.split(",").length >= 3
-    && bezDiakritiky(lok.lokalita).includes(bezDiakritiky(nazevUlice(c))));  // geokodér jinak vrátí i jinou ulici v části obce
+  // Mimo města s částmi obce má adresa jen dvě části („Wolkerova 757, 27351 Unhošť“) – i ty berem (oprava 20. 11. 2026).
+  const ulice = kand.find((c) => c.attributes.Type === "AdresniMisto" && c.address.split(",").length >= 2
+    && !/^č\.\s?[pe]\./.test(c.address) && bezDiakritiky(lok.lokalita).includes(bezDiakritiky(nazevUlice(c))));  // geokodér jinak vrátí i jinou ulici v části obce
   if (ulice) {
     const nazev = nazevUlice(ulice);
-    const obec = ulice.address.match(/Praha|[^,]+$/)?.[0]?.trim();
+    const casti = ulice.address.split(",").map((s) => s.trim());
+    const obec = ulice.address.match(/Praha/)?.[0] || casti[casti.length - 1].replace(/^\d{3}\s?\d{2}\s+/, "");
     const inzOdkaz = { typ: lok.typ, dispozice: lok.dispozice, ulice: nazev, obec, portal: url.hostname.replace(/^www\./, "") };
-    const adresy = await adresyVUlici(nazev, obec, ulice.address.split(",")[1].trim());
+    const adresy = await adresyVUlici(nazev, obec, casti.length >= 3 ? casti[1] : undefined);
     adresy.forEach((a) => { a.vzdalenost = null; });
     const poradi = (await ohodnot(adresy, inzOdkaz)).filter((x) => x.skore > 0);
     if (poradi.length === 1) return zobrazBudovu(poradi[0], inzOdkaz, { jak: "jediný dům v ulici, který sedí typem", jistota: "střední" });
     if (poradi.length) return vyberNaMape(poradi, [],
-      `${url.hostname.endsWith("sreality.cz") ? "Sreality nedovolují inzerát přečíst automaticky" : "Inzerát se teď nepodařilo přečíst"}, z odkazu známe jen ulici ${esc(nazev)}.`, inzOdkaz);
+      `${url.hostname.endsWith("sreality.cz") ? "Sreality nedovolují inzerát přečíst automaticky" : "Inzerát se teď nepodařilo přečíst"}, z odkazu známe jen ${lok.bezUlice ? "část obce" : "ulici"} ${esc(nazev)}.`, inzOdkaz);
+  }
+  // Bez ulice (obce bez ulic, inzerát s „Lokalita je pouze orientační“): řekneme aspoň, co z odkazu víme (Petr 20. 11. 2026).
+  // Přednost má adresní místo („Novosedly 8, 38101 Kájov“ → „Novosedly, Kájov“), pak obec nebo část obce, katastr až nakonec.
+  const am = kand.find((c) => c.attributes.Type === "AdresniMisto")?.address;
+  const zAdresy = am && (() => { const [prvni, posledni] = [am.split(",")[0], am.split(",").pop()];
+    const obecA = posledni.replace(/^\s*\d{3}\s?\d{2}\s+/, "").trim();
+    const cast = prvni.replace(/\s+\d+\w?$/, "").replace(/^č\.\s?[pe]\..*$/, "").trim();
+    if (!bezDiakritiky(lok?.lokalita || "").includes(bezDiakritiky(obecA))) return null;   // jiné místo, než je v odkazu
+    return cast && cast !== obecA && bezDiakritiky(lok.lokalita).includes(bezDiakritiky(cast)) ? { misto: `${cast}, ${obecA}`, priklad: `${cast} 123, ${obecA}` } : { misto: obecA, priklad: `${obecA} 123` }; })();
+  const obecG = kand.find((c) => ["Obec", "CastObce"].includes(c.attributes.Type))?.address;
+  const m = zAdresy || (obecG && { misto: obecG, priklad: `${obecG} 123` });
+  if (m) {
+    const proc = url.hostname.endsWith("sreality.cz") ? "Sreality nedovolují inzerát přečíst automaticky a&nbsp;v&nbsp;odkazu" : "Inzerát se nepodařilo přečíst a&nbsp;v&nbsp;odkazu";
+    $("vysledek").innerHTML = karta("upresnit", `Z odkazu známe jen místo: ${esc(m.misto)}`,
+      `<p>${proc} je jen ${esc(m.misto)}, bez ulice a čísla domu. Zadejte prosím adresu do pole nahoře, například „${esc(m.priklad)}“. Číslo domu bývá v&nbsp;inzerátu na mapě, jinak vám ho sdělí makléř nebo prodávající.</p>`);
+    return;
   }
   $("vysledek").innerHTML = karta("upresnit", "Z odkazu nejde vyčíst adresu", `<p>${BEZ_ULICE}</p>`);
 }
