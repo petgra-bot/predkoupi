@@ -259,3 +259,16 @@ a.obj-plovouci, a.obj-plovouci:visited { position: fixed; left: 16px; right: 16p
 .pl-prevod { background: none; border: 0; padding: 8px 0; font: inherit; font-size: .9rem; color: var(--navy); text-decoration: underline;
   text-underline-offset: 3px; cursor: pointer; justify-self: center; min-height: 44px; }
 .pl-volby button:disabled { opacity: .6; cursor: progress; }
+
+/* Snímek inzerátu (varianta A, 20. 11. 2026) */
+.snimek-pole { display: flex; flex-direction: column; align-items: center; gap: 8px; margin: 14px 0; padding: 22px 16px;
+  border: 1px dashed rgba(255,255,255,.45); text-align: center; cursor: pointer; touch-action: manipulation; }
+.snimek-pole.nad { background: rgba(255,255,255,.08); border-style: solid; }
+.snimek-tl { font: 600 .75rem "Montserrat", sans-serif; text-transform: uppercase; letter-spacing: .08em; background: var(--bila);
+  color: var(--navy); padding: 12px 18px; min-height: 44px; display: inline-flex; align-items: center; }
+.snimek-napoveda { font-size: .85rem; color: var(--slabe-t); }
+@media (hover: none) { .snimek-napoveda { display: none; } }
+.snimek-pole:focus-within { outline: 2px solid var(--bila); outline-offset: 2px; }
+button.odkaz { font: inherit; color: inherit; background: none; border: 0; padding: 4px 0; text-decoration: underline; cursor: pointer; touch-action: manipulation; }
+.snimek-vstup { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; clip-path: inset(50%); }
+.snimek-pole { position: relative; }

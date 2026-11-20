@@ -479,8 +479,13 @@ async function overitOdkaz(url) {
   // Sreality automatické čtení zakazují (robots.txt), skript na Cloudflaru je proto nečte.
   const inz = url.hostname.endsWith("sreality.cz") ? null : await nactiInzerat(url.href).catch((err) => { console.warn(err); return null; });
   if (inz) return zpracujInzerat(inz);
+  // Portál čtení nedovolí (Sreality): nejdřív nabídneme snímek inzerátu (varianta A, Petr 20. 11. 2026),
+  // bez snímku zůstává dřívější cesta (ulice nebo obec z adresy odkazu a výběr na mapě).
+  return nabidniSnimek(url);
+}
 
-  // Portál čtení nedovolí (Sreality): z adresy odkazu známe typ a ulici, dům vybereme podle typu.
+async function bezSnimku(url) {
+  nacitam("Hledám ulici z odkazu…");
   const lok = lokalitaZOdkazu(url);
   const kand = lok?.lokalita ? (await geokoduj(lok.lokalita, 10)) : [];
   // Adresa v ulici má tvar „Ulice 12/3, Část obce, PSČ Obec“; bez ulice jen „Část obce 123, PSČ Obec“.
@@ -517,6 +522,129 @@ async function overitOdkaz(url) {
     return;
   }
   $("vysledek").innerHTML = karta("upresnit", "Z odkazu nejde vyčíst adresu", `<p>${BEZ_ULICE}</p>`);
+}
+
+// ---------- Snímek inzerátu (varianta A, Petr 20. 11. 2026; test na 23 inzerátech v docs/sreality-test.md) ----------
+
+const SNIMKU_MAX = 3;
+
+function nabidniSnimek(url) {
+  window.mer?.("snimek_nabidka");
+  const sreality = url.hostname.endsWith("sreality.cz");
+  $("vysledek").innerHTML = karta("upresnit", "Pošlete snímek inzerátu",
+    `<p>${sreality ? "Sreality nám adresu přečíst nedovolí." : "Inzerát se nepodařilo přečíst."} Udělejte snímek obrazovky
+    inzerátu a&nbsp;vyberte ho tady. Nejvíc pomůže nadpis, tabulka údajů a&nbsp;mapa se špendlíkem – klidně na 2–3 snímcích.</p>
+    <label class="snimek-pole" id="snimek-pole">
+      <input type="file" id="snimek-soubor" accept="image/*" multiple class="snimek-vstup">
+      <span class="snimek-tl">Vybrat snímky</span>
+      <span class="snimek-napoveda">nebo sem snímek přetáhněte či vložte (Ctrl+V)</span>
+    </label>
+    <p class="tlumene">Ze snímku čteme jen údaje o&nbsp;nemovitosti, snímek neukládáme. Dům pak potvrdíte na mapě.</p>
+    <p><button type="button" class="odkaz" id="bez-snimku">Pokračovat bez snímku</button></p>`);
+  const vstup = $("snimek-soubor"), pole = $("snimek-pole");
+  const posli = (soubory) => {
+    const obrazky = [...soubory].filter((f) => f.type.startsWith("image/")).slice(0, SNIMKU_MAX);
+    if (obrazky.length) { document.removeEventListener("paste", vlozeni); zpracujSnimky(obrazky, url).catch(chyba); }
+  };
+  const vlozeni = (e) => posli([...(e.clipboardData?.files || [])]);
+  vstup.addEventListener("change", () => posli(vstup.files));
+  document.addEventListener("paste", vlozeni);
+  pole.addEventListener("dragover", (e) => { e.preventDefault(); pole.classList.add("nad"); });
+  pole.addEventListener("dragleave", () => pole.classList.remove("nad"));
+  pole.addEventListener("drop", (e) => { e.preventDefault(); pole.classList.remove("nad"); posli(e.dataTransfer.files); });
+  $("bez-snimku").addEventListener("click", () => { document.removeEventListener("paste", vlozeni); bezSnimku(url).catch(chyba); });
+}
+
+// Zmenšit na nejvýš 1600 px a převést na JPEG: rychlejší nahrání z mobilu a snímek bez EXIF údajů.
+async function zmensi(soubor) {
+  const bmp = await createImageBitmap(soubor);
+  const k = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
+  const c = document.createElement("canvas");
+  c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
+  c.getContext("2d").drawImage(bmp, 0, 0, c.width, c.height);
+  return new Promise((ok) => c.toBlob(ok, "image/jpeg", 0.85));
+}
+
+async function zpracujSnimky(soubory, url) {
+  window.mer?.("snimek_poslan");
+  nacitam(`Čtu ${soubory.length > 1 ? "snímky" : "snímek"} inzerátu…`);
+  const fd = new FormData();
+  for (const s of soubory) fd.append("snimky", await zmensi(s), "snimek.jpg");
+  const r = await fetch(`${window.OBJEDNAVKY?.api || "https://api.predkoupi.cz"}/inzerat/snimek`, { method: "POST", body: fd });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) {
+    $("vysledek").innerHTML = karta("upresnit", "Snímek se nepodařilo přečíst",
+      `<p>${esc(data.detail || "Zkuste to prosím znovu, nebo zadejte adresu do pole nahoře.")}</p>
+      <p><button type="button" class="odkaz" id="znovu-snimek">Poslat jiný snímek</button> · <button type="button" class="odkaz" id="bez-snimku">Pokračovat bez snímku</button></p>`);
+    $("znovu-snimek").addEventListener("click", () => nabidniSnimek(url));
+    $("bez-snimku").addEventListener("click", () => bezSnimku(url).catch(chyba));
+    return;
+  }
+  return domZeSnimku(data, url);
+}
+
+const cislaAdresy = (adresa) => {   // „Ulice 255/11, …“ → ["255", "11"]; „č.p. 291, …“ → ["291"]
+  const m = adresa.split(",")[0].match(/(\d+)(?:\/(\d+\w?))?\s*$/);
+  return m ? [m[1], m[2]].filter(Boolean) : [];
+};
+
+async function domZeSnimku(d, url) {
+  if (d.ve_vystavbe) {
+    $("vysledek").innerHTML = karta("upresnit", "Stavba je podle inzerátu ve výstavbě",
+      `<p>Nedokončený dům v&nbsp;katastru zatím není, takže ho prověřit neumíme. Zkuste to prosím po kolaudaci.</p>
+      <p><button type="button" class="odkaz" id="bez-snimku">Přesto vybrat dům na mapě</button></p>`);
+    $("bez-snimku").addEventListener("click", () => bezSnimku(url).catch(chyba));
+    return;
+  }
+  nacitam("Hledám dům v registru adres a katastru…");
+  const inz = { typ: d.typ, dispozice: d.dispozice, plocha_m2: d.plocha_m2, patro: d.podlazi_bytu, podlazi_budovy: d.podlazi_celkem,
+    pozemek_m2: d.pozemek_m2, cena_kc: d.cena_kc, portal: url.hostname.replace(/^www\./, ""), ulice: d.ulice || d.ulice_u_spendliku };
+  const obec = d.obec === "Praha" || /^Praha\b/.test(d.obec || "") ? "Praha" : d.obec;
+  const sql = (s) => String(s).replace(/'/g, "''");
+  let adresy = [];
+  if (inz.ulice && obec) adresy = await adresyVUlici(inz.ulice, obec, d.cast_obce);
+  if (!adresy.length && (d.cast_obce || obec)) {
+    const misto = d.cast_obce && d.cast_obce !== obec ? d.cast_obce : obec;
+    adresy = (await adresniMista(`adresa like '%${sql(misto)}%'${obec && misto !== obec ? ` and adresa like '%${sql(obec)}%'` : ""}`)).slice(0, 800);
+  }
+  if (!adresy.length) {
+    $("vysledek").innerHTML = karta("upresnit", "Ze snímku nejde určit místo",
+      `<p>Na snímku jsme nenašli obec ani ulici. Zadejte prosím adresu do pole nahoře.</p>`);
+    return;
+  }
+  const b = {};
+  const kody = [...new Set(adresy.map((a) => a.so))].filter(Boolean);
+  for (let i = 0; i < kody.length; i += 100) Object.assign(b, await budovy(kody.slice(i, i + 100)));
+  const cisloText = [d.cislo_orientacni, d.cislo_popisne].filter((x) => x != null).map(String);
+  const uSpendliku = new Set((d.presny_spendlik ? d.cisla_u_spendliku || [] : []).map((x) => String(x).trim()));
+  const podleBudovy = new Map();
+  for (const a of adresy) {
+    const bud = b[a.so];
+    if (!bud) continue;
+    const cisla = cislaAdresy(a.adresa);
+    let skore = shodaSInzeratem(bud, inz);
+    const duvody = [];
+    if (cisloText.length && cisla.some((c) => cisloText.includes(c))) { skore += 10; duvody.push("číslo domu z textu inzerátu"); }
+    if (d.zastavena_plocha_m2 && bud.zastavenaplocha) {
+      const r = Math.abs(bud.zastavenaplocha - d.zastavena_plocha_m2) / d.zastavena_plocha_m2;
+      if (r <= 0.03) { skore += 4; duvody.push(`zastavěná plocha ${bud.zastavenaplocha} m²`); }
+      else if (r <= 0.08) skore += 2;
+      else if (r > 0.25) skore -= 2;
+    }
+    if (cisla.some((c) => uSpendliku.has(c))) { skore += 4; duvody.push("číslo domu u špendlíku na mapě"); }
+    const pred = podleBudovy.get(a.so);
+    if (!pred || skore > pred.skore) podleBudovy.set(a.so, { ...a, skore, duvody: pred ? [...new Set([...pred.duvody, ...duvody])] : duvody });
+  }
+  const poradi = [...podleBudovy.values()].sort((x, y) => y.skore - x.skore);
+  const nej = poradi[0]?.skore ?? 0;
+  const kandidati = poradi.filter((x) => x.skore >= nej - 1).slice(0, 6);
+  const cteno = [TYP_INZERATU[d.typ] || null, d.dispozice, d.plocha_m2 && `${d.plocha_m2} m²`,
+    d.podlazi_bytu && `${d.podlazi_bytu}. podlaží${d.podlazi_celkem ? ` z ${d.podlazi_celkem}` : ""}`,
+    d.zastavena_plocha_m2 && `zastavěná plocha ${d.zastavena_plocha_m2} m²`, d.pozemek_m2 && `pozemek ${d.pozemek_m2} m²`,
+    [d.ulice || d.ulice_u_spendliku, d.cast_obce, obec].filter(Boolean).join(", ")].filter(Boolean).join(" · ");
+  const uvod = `Ze snímku: ${esc(cteno)}. ${kandidati.length === 1 ? "Podle katastru sedí jeden dům – potvrďte ho prosím."
+    : `Podle katastru sedí nejlépe ${kandidati.length} ${kandidati.length < 5 ? "domy" : "domů"} – vyberte ten z inzerátu.`}`;
+  return vyberNaMape(poradi.slice(0, 120), kandidati, uvod, inz);
 }
 
 async function overit(e) {
