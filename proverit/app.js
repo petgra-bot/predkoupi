@@ -153,7 +153,8 @@ async function budovyUBodu(lat, lon, metru) {
 
 async function adresyVUlici(ulice, obec, cast) {
   const sql = (s) => String(s).replace(/'/g, "''");
-  const vse = await adresniMista(`adresa like '${sql(ulice)} %' and adresa like '%${sql(obec || "Praha")}%'`);
+  // UPPER: inzeráty píšou „Pod Pekárnami“, RÚIAN „Pod pekárnami“ (snímek inzerátu, 20. 11. 2026).
+  const vse = await adresniMista(`UPPER(adresa) like '${sql(ulice.toUpperCase())} %' and adresa like '%${sql(obec || "Praha")}%'`);
   const vCasti = cast ? vse.filter((a) => a.adresa.includes(`, ${cast},`)) : [];
   return (vCasti.length ? vCasti : vse).filter((a) => naUlici(a.adresa, ulice));
 }
@@ -624,11 +625,11 @@ async function domZeSnimku(d, url) {
     const cisla = cislaAdresy(a.adresa);
     let skore = shodaSInzeratem(bud, inz);
     const duvody = [];
-    if (cisloText.length && cisla.some((c) => cisloText.includes(c))) { skore += 10; duvody.push("číslo domu z textu inzerátu"); }
+    if (cisloText.length && (!inz.ulice || naUlici(a.adresa, inz.ulice)) && cisla.some((c) => cisloText.includes(c))) { skore += 10; duvody.push("číslo domu z textu inzerátu"); }
     if (d.zastavena_plocha_m2 && bud.zastavenaplocha) {
       const r = Math.abs(bud.zastavenaplocha - d.zastavena_plocha_m2) / d.zastavena_plocha_m2;
       if (r <= 0.03) { skore += 4; duvody.push(`zastavěná plocha ${bud.zastavenaplocha} m²`); }
-      else if (r <= 0.08) skore += 2;
+      else if (r <= 0.08) skore += 1;
       else if (r > 0.25) skore -= 2;
     }
     if (cisla.some((c) => uSpendliku.has(c))) { skore += 4; duvody.push("číslo domu u špendlíku na mapě"); }
@@ -638,9 +639,9 @@ async function domZeSnimku(d, url) {
   const poradi = [...podleBudovy.values()].sort((x, y) => y.skore - x.skore);
   const nej = poradi[0]?.skore ?? 0;
   const kandidati = poradi.filter((x) => x.skore >= nej - 1).slice(0, 6);
-  const cteno = [TYP_INZERATU[d.typ] || null, d.dispozice, d.plocha_m2 && `${d.plocha_m2} m²`,
+  const cteno = [TYP_INZERATU[d.typ] || null, d.dispozice, d.plocha_m2 && `${d.plocha_m2.toLocaleString("cs-CZ")} m²`,
     d.podlazi_bytu && `${d.podlazi_bytu}. podlaží${d.podlazi_celkem ? ` z ${d.podlazi_celkem}` : ""}`,
-    d.zastavena_plocha_m2 && `zastavěná plocha ${d.zastavena_plocha_m2} m²`, d.pozemek_m2 && `pozemek ${d.pozemek_m2} m²`,
+    d.zastavena_plocha_m2 && `zastavěná plocha ${d.zastavena_plocha_m2.toLocaleString("cs-CZ")} m²`, d.pozemek_m2 && `pozemek ${d.pozemek_m2.toLocaleString("cs-CZ")} m²`,
     [d.ulice || d.ulice_u_spendliku, d.cast_obce, obec].filter(Boolean).join(", ")].filter(Boolean).join(" · ");
   const uvod = `Ze snímku: ${esc(cteno)}. ${kandidati.length === 1 ? "Podle katastru sedí jeden dům – potvrďte ho prosím."
     : `Podle katastru sedí nejlépe ${kandidati.length} ${kandidati.length < 5 ? "domy" : "domů"} – vyberte ten z inzerátu.`}`;
