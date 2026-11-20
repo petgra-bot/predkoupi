@@ -18,8 +18,10 @@ export default {
     if (request.method === "OPTIONS") return new Response(null, { headers: { ...cors, "Access-Control-Allow-Methods": "GET, POST" } });
     if (request.method === "POST" && new URL(request.url).pathname === "/zajem") return zajemce(request, env, cors, origin);
 
+    // Chyby se neukládají (prohlížeč by jinak hodinu držel i krátký výpadek portálu).
     const odpoved = (data, status = 200) => new Response(JSON.stringify(data), {
-      status, headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "public, max-age=3600", ...cors },
+      status, headers: { "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": status === 200 ? "public, max-age=3600" : "no-store", ...cors },
     });
 
     let cil;
@@ -31,12 +33,20 @@ export default {
     const cache = caches.default;
     const klic = new Request(`https://cache.local/${encodeURIComponent(cil.href)}`);
     const ulozeno = await cache.match(klic);
-    if (ulozeno) return new Response(ulozeno.body, { headers: { ...Object.fromEntries(ulozeno.headers), ...cors } });
+    // Do mezipaměti jde odpověď BEZ hlaviček CORS a ty se přidají podle aktuálního webu. Dřív se uložená hlavička
+    // spojila s novou („https://predkoupi.cz, https://predkoupi.cz“) a prohlížeč každé opakované čtení inzerátu
+    // do hodiny zahodil – i na produkci (zjištěno 20. 11. 2026).
+    if (ulozeno) {
+      const h = new Headers(ulozeno.headers);
+      h.delete("Access-Control-Allow-Origin"); h.delete("Vary");
+      for (const [k, v] of Object.entries(cors)) h.set(k, v);
+      return new Response(ulozeno.body, { headers: h });
+    }
 
     let r;
     try {
       r = await fetch(cil.href, { headers: {
-        "User-Agent": "Mozilla/5.0 (compatible; ProverkaNemovitosti/0.1; +https://proverka.gratzer.cz)",
+        "User-Agent": "Mozilla/5.0 (compatible; PredKoupi/0.2; +https://predkoupi.cz)",
         "Accept": "text/html", "Accept-Language": "cs" } });
     } catch (e) {
       // Portál odmítl automatický dotaz (např. smyčkou přesměrování). Neobcházíme to.
@@ -46,9 +56,9 @@ export default {
     let data;
     try { data = { portal: host, url: cil.href, ...parser(await r.text(), cil) }; }
     catch (e) { return odpoved({ chyba: "Inzerát se nepodařilo přečíst.", portal: host, detail: String(e) }, 502); }
-    const vysledek = odpoved(data);
-    ctx.waitUntil(cache.put(klic, vysledek.clone()));
-    return vysledek;
+    ctx.waitUntil(cache.put(klic, new Response(JSON.stringify(data), {
+      headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "public, max-age=3600" } })));
+    return odpoved(data);
   },
 };
 
