@@ -24,9 +24,11 @@ const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const nacitam = (text) => { $("vysledek").innerHTML = `<p class="tlumene">${esc(text)}</p>`; };
 
-async function dotaz(url, params) {
-  const r = await fetch(`${url}?${new URLSearchParams({ f: "json", ...params })}`);
-  if (!r.ok) throw new Error(`Služba ČÚZK odpověděla ${r.status}`);
+async function dotaz(url, params, pokus = 1) {
+  // Služba ČÚZK občas krátce vrací 500 bez hlaviček CORS (20. 11. 2026): jednou zopakovat, ať klient nepřijde o výsledek.
+  const r = await fetch(`${url}?${new URLSearchParams({ f: "json", ...params })}`).catch((e) => ({ ok: false, status: e.message }));
+  if (!r.ok && pokus < 2) { await new Promise((ok) => setTimeout(ok, 1500)); return dotaz(url, params, pokus + 1); }
+  if (!r.ok) throw new Error(`Služba ČÚZK teď neodpovídá (${r.status})`);
   const data = await r.json();
   if (data.error) throw new Error(data.error.message || "Chyba služby ČÚZK");
   return data;
