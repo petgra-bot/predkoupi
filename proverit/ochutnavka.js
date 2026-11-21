@@ -316,7 +316,7 @@ function ochEmail(cil, oblasti, adresa) {
       <label for="och-email-pole">Pošlete mi přehled e-mailem</label>
       <div class="och-email-radek"><input id="och-email-pole" type="email" autocomplete="email" inputmode="email" placeholder="vas@email.cz" required>
         <button type="submit">Poslat</button></div>
-      <label class="och-email-tipy"><input type="checkbox" name="tipy"> Občas mi pošlete tip ke koupi bydlení (odhlášení jedním kliknutím)</label>
+      <label class="och-email-tipy"><input type="checkbox" name="tipy"> Pošlete mi 3 tipy, na co si dát pozor při koupi bytu (odhlášení jedním kliknutím)</label>
       <p class="och-email-stav" role="status"></p>
     </form>`);
   const f = cil.querySelector(".och-email"), stav = f.querySelector(".och-email-stav");
