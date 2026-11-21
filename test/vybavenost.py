@@ -1,12 +1,13 @@
-"""Vybavenost pro přehled zdarma: potraviny, školy, školky a zastávky MHD v Praze z OpenStreetMap (Petr 21. 11. 2026).
+"""Vybavenost pro přehled zdarma: potraviny, školy, školky a zastávky MHD v Praze a okolí z OpenStreetMap (Petr 21. 11. 2026).
 
 Veřejné servery Overpass jsou z prohlížeče pomalé a často neodpoví, proto data stáhneme jednou dopředu do malého
 souboru na webu (proverit/vybavenost.json) a přehled spočítá nejbližší místa přímo v prohlížeči.
 
-Obnova (stačí jednou za 3 měsíce):
+Obnova (stačí jednou za 3 měsíce; od 21. 11. 2026 i okresy Praha-východ a Praha-západ):
   curl -o /tmp/Prag.osm.pbf https://download.bbbike.org/osm/bbbike/Prag/Prag.osm.pbf
+  curl -o /tmp/sk.osm.pbf https://download.openstreetmap.fr/extracts/europe/czech_republic/stredocesky-latest.osm.pbf
   pip install osmium
-  python3 test/vybavenost.py /tmp/Prag.osm.pbf
+  python3 test/vybavenost.py /tmp/Prag.osm.pbf /tmp/sk.osm.pbf
 Licence dat: © přispěvatelé OpenStreetMap, ODbL (uvádíme u řádku Vybavenost a ve zdrojích přehledu).
 """
 import json
@@ -16,8 +17,8 @@ from pathlib import Path
 
 import osmium
 
-# Praha a kousek okolí (výřez BBBike „Prag“ je větší – data mimo zbytečně zvětšují soubor).
-JIH, SEVER, ZAPAD, VYCHOD = 49.93, 50.18, 14.20, 14.73
+# Praha a okresy Praha-východ a Praha-západ (obdélník okresů z RÚIAN; zbytek kraje by soubor jen zvětšil).
+JIH, SEVER, ZAPAD, VYCHOD = 49.76, 50.32, 14.07, 14.98
 
 
 def druh(t):
@@ -61,7 +62,8 @@ class Sber(osmium.SimpleHandler):
 
 def main():
     s = Sber()
-    s.apply_file(sys.argv[1], locations=True)
+    for soubor in sys.argv[1:]:
+        s.apply_file(soubor, locations=True)
     vystup = {"zdroj": "© přispěvatelé OpenStreetMap (ODbL)", "stav": date.today().isoformat(),
               **{k: [x for b in sorted(v) for x in b] for k, v in s.body.items()}}   # ploché pole lat, lon, lat, lon…
     cil = Path(__file__).resolve().parent.parent / "proverit" / "vybavenost.json"

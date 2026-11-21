@@ -374,10 +374,18 @@ async function vyberNaMape(vsechny, kandidati, uvod, inz) {
     zobrazBudovu(vybranyDum, inz, { jak: "vybráno na mapě", jistota: "jistá" }).catch(chyba));
 }
 
+// Okolí Prahy (okresy Praha-východ a Praha-západ, Petr 21. 11. 2026): rozhoduje kód části obce budovy z RÚIAN, ne název
+// obce (názvy se v ČR opakují). Seznam z nemo/nastroje/data/obce_okoli_prahy.json.
+let okoliSlib = null;
+const OKOLI_PRAHY = () => (okoliSlib ||= fetch("/proverit/okoli-prahy.json?v=1").then((r) => r.json())
+  .then((d) => new Set(d.casti_obce)).catch(() => { okoliSlib = null; return new Set(); }));
+
 async function zobrazBudovu(adresa, inz, puvod) {
   nacitam("Načítám údaje o budově…");
-  const b = (await budovy([adresa.so]))[adresa.so];
+  const [b, okoli] = await Promise.all([budovy([adresa.so]).then((x) => x[adresa.so]), OKOLI_PRAHY()]);
   if (!b) throw new Error("Budovu k adrese se v RÚIAN nepodařilo načíst");
+  const vOkoli = okoli.has(b.castobce);
+  const obec = (adresa.adresa.match(/\d{5}\s+(.+)$/)?.[1] || adresa.adresa.split(",").pop()).trim();
   const mcSlib = mestskaCast(b.momc).catch(() => null);   // nečekáme: doplní se do tabulky, až přijde
   const { typ, zpusob } = typBudovy(b);
 
@@ -389,7 +397,7 @@ async function zobrazBudovu(adresa, inz, puvod) {
   const rok = b.dokonceni ? new Date(b.dokonceni).getFullYear() : null;
   const radky = [
     ["Adresa", adresa.adresa],
-    ["Městská část", "…"],
+    vOkoli ? ["Obec", obec] : ["Městská část", "…"],
     ["Typ", typ === zpusob ? typ : `${typ} (v RÚIAN: ${zpusob})`],
     ["Čísla popisná budovy", b.cisladomovni],
     ...(b.pocetbytu ? [["Bytů v budově", b.pocetbytu]] : []),
@@ -414,8 +422,7 @@ async function zobrazBudovu(adresa, inz, puvod) {
        Jednotku dohledáme v katastru podle plochy a podlaží z inzerátu.</p>`
     : "";
   const tabulka = `<dl>${radky.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("")}</dl>`;
-  const vPraze = /Praha/.test(adresa.adresa);
-  const obec = (adresa.adresa.match(/\d{5}\s+(.+)$/)?.[1] || adresa.adresa.split(",").pop()).trim();
+  const vPraze = /Praha/.test(adresa.adresa) || vOkoli;   // Praha nebo okolí Prahy: přehled a objednávka
   const nadpis = typ === "jiná stavba" ? "Tento typ stavby zatím neprověřujeme" : "Nemovitost je identifikovaná";
   const jina = typ === "jiná stavba";
   // Údaje o budově sbalené pod jedním řádkem (adresa a typ); upozornění a „Není to on?“ zůstávají vidět.
@@ -437,15 +444,15 @@ async function zobrazBudovu(adresa, inz, puvod) {
       <p>Objednávky Prověrky (790 Kč) a Prověrky PLUS (1 390 Kč) spouštíme v nejbližších týdnech.</p>
       <div class="akce"><a class="tl tmave-tl" href="/#ceny">Co obsahuje Prověrka</a></div><div class="co-dal-zajem" data-zajem data-zdroj="proverit"></div></div>`
       // Mimo Prahu (W11, 12. 11. 2026): měříme zájem – e-mail a obec, ať víme, kam službu rozšířit.
-      : `<div class="co-dal"><h3>Mimo Prahu zatím neprověřujeme</h3>
-      <p>Prověrku zatím děláme jen v Praze, protože pro ni máme nejpodrobnější data (územní plán, záplavy, hluk u fasády).
-      Podle zájmu přidáme další obce – nejdřív okolí Prahy.</p>
+      : `<div class="co-dal"><h3>Tady zatím neprověřujeme</h3>
+      <p>Prověrku děláme v Praze a v okresech Praha-východ a Praha-západ. Podle zájmu přidáme další obce.</p>
       <div class="co-dal-zajem" data-zajem data-zdroj="${esc(("mimo:" + obec).slice(0, 40))}" data-stitek="E-mail pro oznámení, až budeme prověřovat i v obci ${esc(obec)}"
         data-souhlas="Pošleme jedinou zprávu, až službu rozšíříme do vaší obce, a pak e-mail smažeme. Ukládáme jen e-mail a název obce."
         data-hotovo="až budeme prověřovat i ve vaší obci"></div></div>`);
   mcSlib.then((mc) => { const dd = [...$("vysledek").querySelectorAll("dt")].find((x) => x.textContent === "Městská část")?.nextElementSibling; if (dd) dd.textContent = mc || "–"; });
   if (!jina) window.mer?.(vPraze ? "prehled" : "mimo_prahu");
-  if ($("ochutnavka")) ochutnavka(adresa.so, $("ochutnavka"), { start: puvod.start, obrys: b.obrys, rodinny: !byt, adresa: adresa.text || adresa.adresa || "" });
+  if ($("ochutnavka")) ochutnavka(adresa.so, $("ochutnavka"), { start: puvod.start, obrys: b.obrys, rodinny: !byt, adresa: adresa.text || adresa.adresa || "",
+    oblast: vOkoli ? "okoli" : "praha", obec: vOkoli ? obec : "" });
   $("vysledek").querySelector("[data-znovu]")?.addEventListener("click", () => { const v = $("vstup"); v.value = ""; v.focus(); v.scrollIntoView({ block: "center" }); });
   if ($("objednat")) window.objednavkaFormular($("objednat"), { adresa: adresa.adresa, typ, inz });
   plovouciObjednat();
