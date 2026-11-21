@@ -289,18 +289,25 @@ function ochutnavkaOblasti(dum, rodinny = true, oblast = "praha", obec = "") {
     for (const [kod, nazev] of Object.entries(NAZVY)) {
       const b = data[kod] || [];
       for (let i = 0; i < b.length; i += 2) {
-        if (Math.abs(b[i] - lat) > 0.01 || Math.abs(b[i + 1] - lon) > 0.015) continue;   // rychlé síto ~1 km
+        if (Math.abs(b[i] - lat) > 0.03 || Math.abs(b[i + 1] - lon) > 0.045) continue;   // rychlé síto ~3 km
         const d = km(b[i], b[i + 1]);
-        if (d <= 1000 && (!(nazev in nej) || d < nej[nazev])) nej[nazev] = Math.round(d);
+        if (d <= 3000 && (!(nazev in nej) || d < nej[nazev])) nej[nazev] = Math.round(d);
       }
     }
-    const zaokr = (d) => d < 100 ? `${Math.max(10, Math.round(d / 10) * 10)} m` : `${Math.round(d / 50) * 50} m`;
-    // Rozšířeno 21. 11. 2026 (recenze): lékárna, hřiště nebo park a druh dopravy (metro, vlak, tramvaj, autobus do 1 km).
-    const zakl = ["potraviny", "škola", "školka", "lékárna", "hřiště nebo park"]
-      .map((n) => `${n} ${n in nej ? zaokr(nej[n]) : "dál než 1 km"}`).join(" · ");
-    const doprava = ["metro", "vlak", "tramvaj", "autobus"].filter((n) => n in nej).map((n) => `${n} ${zaokr(nej[n])}`);
-    const text = `${zakl} · doprava: ${doprava.length ? doprava.join(", ") : "zastávka dál než 1 km"}`;
-    return radek("Vybavenost", "info", `Nejblíž vzdušnou čarou: ${text}.`);
+    const zaokr = (d) => d < 100 ? `${Math.max(10, Math.round(d / 10) * 10)} m` : d < 1000 ? `${Math.round(d / 50) * 50} m`
+      : `${(Math.round(d / 100) / 10).toLocaleString("cs-CZ")} km`;
+    const vzd = (n) => n in nej ? zaokr(nej[n]) : "dál než 3 km";
+    // Rozšířeno 21. 11. 2026 (recenze): lékárna, hřiště nebo park a druh dopravy (metro, vlak, tramvaj, autobus).
+    const zakl = ["potraviny", "škola", "školka", "lékárna", "hřiště nebo park"].map((n) => `${n} ${vzd(n)}`).join(" · ");
+    const doprava = ["metro", "vlak", "tramvaj", "autobus"].filter((n) => (nej[n] ?? 1e9) <= 1000).map((n) => `${n} ${zaokr(nej[n])}`);
+    const zastavka = Math.min(...["metro", "vlak", "tramvaj", "autobus"].map((n) => nej[n] ?? 1e9));
+    const text = `${zakl} · doprava: ${doprava.length ? doprava.join(", ") : `nejbližší zastávka ${zastavka < 1e9 ? zaokr(zastavka) : "dál než 3 km"}`}`;
+    // Barva (Petr 21. 11. 2026, Zvánovice): pozor, když je daleko obchod nebo zastávka (nad 1,5 km), nebo když jsou
+    // aspoň 3 z 5 základních míst (potraviny, škola, školka, lékárna, zastávka) dál než 1 km. Riziko nikdy – je to
+    // vlastnost místa, kterou kupující volí, ne vada nemovitosti.
+    const daleko = [nej["potraviny"], nej["škola"], nej["školka"], nej["lékárna"], zastavka].filter((d) => (d ?? 1e9) > 1000).length;
+    const pozor = (nej["potraviny"] ?? 1e9) > 1500 || zastavka > 1500 || daleko >= 3;
+    return radek("Vybavenost", pozor ? "oranzova" : "zelena", `Nejblíž vzdušnou čarou: ${text}.` + (pozor ? " Na běžné nákupy a do školy budete nejspíš jezdit autem." : ""));
   })();
   let { povodne: pov, hluk: hl, plan: pl, okoli: ok, stavby: st } = oblast === "okoli" ? ochutnavkaOkoli(dum, rodinny, obec)
     : { povodne, hluk, plan, okoli, stavby };

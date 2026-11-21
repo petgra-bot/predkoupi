@@ -23,6 +23,18 @@ window.PRAHA = {"x0":-756511,"x1":-722569,"y0":-1058800,"y1":-1034123,"w":200,"h
     const vb = [Math.min(-6, b[0] - 12), Math.min(-6, b[1] - 12)];
     const vb2 = [Math.max(P.w + 6, b[0] + 12) - vb[0], Math.max(P.h + 6, b[1] + 12) - vb[1]];
     const obec = String(adresa || "").match(/\d{3}\s?\d{2}\s+([^,]+)$/)?.[1] || String(adresa || "").split(",").pop().trim();
+    // Mimo Prahu (Petr 21. 11. 2026): místo roztažené Prahy mapka Středočeského kraje s okresy (window.KRAJ, objednavka/kraj.js),
+    // zvýrazněný okres domu, Praha uprostřed a tečka; popisek „obec · okres“.
+    const K = window.KRAJ;
+    if (venku && K) {
+      const kb = [(cx - K.x0) / (K.x1 - K.x0) * K.w, (K.y1 - cy) / (K.y1 - K.y0) * K.h];
+      const okres = (K.okresy.find((o) => kruhy(o.d).filter((r) => uvnitr(kb, r)).length % 2 === 1) || {}).n;
+      const kx = kb[0].toFixed(1), ky = kb[1].toFixed(1);
+      const ok = K.okresy.map((o) => `<path d="${o.d}" fill="${o.n === okres ? "rgba(255,255,255,.18)" : "none"}" stroke="rgba(255,255,255,${o.n === okres ? ".8" : ".3"})" stroke-width="${o.n === okres ? 1.1 : .6}"/>`).join("");
+      const popisek = [obec, okres && okres !== obec ? okres : ""].filter(Boolean).join(" · ");
+      return `<div class="${trida}-praha" aria-hidden="true"><svg viewBox="-6 -6 ${K.w + 12} ${K.h + 12}">${ok}<path d="${K.praha}" fill="rgba(255,255,255,.08)" stroke="#fff" stroke-width="1.2"/>
+        <circle class="${trida}-praha-pulz" cx="${kx}" cy="${ky}" r="5" fill="#fff"/><circle cx="${kx}" cy="${ky}" r="5" fill="#fff" stroke="#1e2645" stroke-width="2.2"/></svg><span>${popisek.replace(/[&<>"]/g, "")}</span></div>`;
+    }
     const casti = P.mc.map((m) => `<path d="${m.d}" fill="${m.n === mc ? "rgba(255,255,255,.18)" : "none"}" stroke="rgba(255,255,255,${m.n === mc ? ".7" : ".22"})" stroke-width="${m.n === mc ? 1.1 : .6}"/>`).join("");
     return `<div class="${trida}-praha" aria-hidden="true"><svg viewBox="${vb[0].toFixed(1)} ${vb[1].toFixed(1)} ${vb2[0].toFixed(1)} ${vb2[1].toFixed(1)}">${casti}<path d="${P.d}" fill="none" stroke="#fff" stroke-width="1.8"/>
       <circle class="${trida}-praha-pulz" cx="${x}" cy="${y}" r="6" fill="#fff"/><circle cx="${x}" cy="${y}" r="6" fill="#fff" stroke="#1e2645" stroke-width="2.5"/></svg><span>${(venku ? obec : P.popisek(mc, adresa)).replace(/[&<>"]/g, "")}</span></div>`;
