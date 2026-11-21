@@ -16,8 +16,12 @@ const OCH = {
 };
 // Plánované záměry města (územně analytické podklady) – stejné vrstvy jako uzemni_plan.py; v prohlížeči jedním dotazem identify.
 const OCH_UAP_VRSTVY = "all:2,3,4,5,6,7,8,9,10,12,13,14,15,16,17,18,19,21,22,23,24,25,26,27,28,29,36,37";
-// Vybavenost z OpenStreetMap (Petr 21. 11. 2026): dva veřejné servery Overpass, platí odpověď toho rychlejšího.
-const OCH_OVERPASS = ["https://overpass-api.de/api/interpreter", "https://overpass.private.coffee/api/interpreter"];
+// Vybavenost z OpenStreetMap: předem stažený soubor na našem webu (test/vybavenost.py), načte se jednou za návštěvu.
+let ochVybavenostSlib = null;
+const OCH_VYBAVENOST = () => (ochVybavenostSlib ||= fetch("/proverit/vybavenost.json?v=1").then((r) => {
+  if (!r.ok) { ochVybavenostSlib = null; throw new Error(`vybavenost ${r.status}`); }
+  return r.json();
+}));
 const OCH_STAV = { zelena: "V pořádku", oranzova: "Pozor", cervena: "Riziko", seda: "Nezjištěno", info: "Informace" };
 // Radon: oranžově tam, kde doporučujeme měření (index 3, u rodinného domu i 2) – zelená s úkolem „změřte“ mátla (hodnocení 13. 11.).
 const ochRadonBarva = (idx, rodinny) => idx === 3 || (rodinny && idx === 2) ? "oranzova" : idx === 1 || idx === 2 ? "zelena" : "seda";
@@ -211,32 +215,27 @@ function ochutnavkaOblasti(dum, rodinny = true) {
       `Plánované záměry do 300 m: ${seznam}${z.length > 3 ? ` a další ${z.length - 3}` : ""}. Posudky vlivu na okolí prověříme v Prověrce.`);
   })();
   const vybavenost = (async () => {
-    // Souřadnice domu ve WGS84 z RÚIAN (OpenStreetMap neumí S-JTSK), pak jeden malý dotaz Overpass.
+    // Souřadnice domu ve WGS84 z RÚIAN (body OpenStreetMap jsou ve WGS84); soubor s body se načítá souběžně.
+    const dataP = OCH_VYBAVENOST();
     const [x, y] = stred;
     const b = await ochVolej(`${OCH.RUIAN}/3/query`, { geometry: JSON.stringify({ x, y, spatialReference: { wkid: 5514 } }), geometryType: "esriGeometryPoint",
       inSR: 5514, spatialRel: "esriSpatialRelIntersects", distance: 30, units: "esriSRUnit_Meter", outFields: "kod", returnGeometry: true, outSR: 4326 });
     const body = (b.features?.[0]?.geometry?.rings || []).flat();
     if (!body.length) throw new Error("souřadnice domu chybí");
     const lon = body.reduce((s, p) => s + p[0], 0) / body.length, lat = body.reduce((s, p) => s + p[1], 0) / body.length;
-    const kolem = `(around:1000,${lat.toFixed(6)},${lon.toFixed(6)})`;
-    const DRUHY = [["potraviny", `["shop"~"^(supermarket|convenience|greengrocer)$"]`], ["škola", `["amenity"="school"]`],
-      ["školka", `["amenity"="kindergarten"]`], ["zastávka MHD", `["highway"="bus_stop"]`], ["zastávka MHD", `["railway"~"^(tram_stop|station|halt)$"]`],
-      ["zastávka MHD", `["station"="subway"]`]];
-    const q = `[out:json][timeout:9];(${DRUHY.map(([, f]) => `nwr${kolem}${f};`).join("")});out center tags 300;`;
-    const ms = Math.max(300, OCH_KONEC - performance.now()), ctrl = new AbortController(), cas = setTimeout(() => ctrl.abort(), ms);
-    let data;
-    try {
-      data = await Promise.any(OCH_OVERPASS.map((u) => fetch(u, { method: "POST", body: new URLSearchParams({ data: q }), signal: ctrl.signal })
-        .then((r) => { if (!r.ok) throw new Error(`Overpass ${r.status}`); return r.json(); })));
-    } finally { clearTimeout(cas); ctrl.abort(); }
+    // Body z předem staženého souboru (OpenStreetMap, test/vybavenost.py): z prohlížeče byl Overpass pomalý a často
+    // neodpověděl vůbec (Petr 21. 11. 2026). Nejbližší místa počítáme tady, žádný další dotaz.
+    const data = await dataP;
     const km = (la, lo) => { const k = Math.PI / 180, a = Math.sin((la - lat) * k / 2) ** 2 + Math.cos(lat * k) * Math.cos(la * k) * Math.sin((lo - lon) * k / 2) ** 2; return 12742000 * Math.asin(Math.sqrt(a)); };
+    const NAZVY = { p: "potraviny", s: "škola", k: "školka", z: "zastávka MHD" };
     const nej = {};
-    for (const e of data.elements || []) {
-      const t = e.tags || {}, p = e.lat !== undefined ? e : e.center || {};
-      if (p.lat === undefined) continue;
-      const druh = t.shop ? "potraviny" : t.amenity === "school" ? "škola" : t.amenity === "kindergarten" ? "školka" : "zastávka MHD";
-      const d = Math.round(km(p.lat, p.lon));
-      if (!(druh in nej) || d < nej[druh]) nej[druh] = d;
+    for (const [kod, nazev] of Object.entries(NAZVY)) {
+      const b = data[kod] || [];
+      for (let i = 0; i < b.length; i += 2) {
+        if (Math.abs(b[i] - lat) > 0.01 || Math.abs(b[i + 1] - lon) > 0.015) continue;   // rychlé síto ~1 km
+        const d = km(b[i], b[i + 1]);
+        if (d <= 1000 && (!(nazev in nej) || d < nej[nazev])) nej[nazev] = Math.round(d);
+      }
     }
     const zaokr = (d) => d < 100 ? `${Math.max(10, Math.round(d / 10) * 10)} m` : `${Math.round(d / 50) * 50} m`;
     const text = ["potraviny", "škola", "školka", "zastávka MHD"].map((n) => `${n} ${n in nej ? zaokr(nej[n]) : "dál než 1 km"}`).join(" · ");
