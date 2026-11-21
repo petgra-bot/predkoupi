@@ -276,7 +276,7 @@ async function ochutnavka(soKod, cil, { start = performance.now(), obrys: znamy,
         ${Object.keys(oblasti).map((n) => `<tr class="och-ceka" data-oblast="${esc(n)}"><th scope="row">${esc(n)}</th><td><span class="och-znacka ceka">Prověřujeme</span></td><td><span class="och-nacitani"></span></td></tr>`).join("")}
         ${OCH_ZAMCENE}
       </tbody></table>
-      <p class="tlumene">Z veřejných map (Geoportál hl. m. Prahy, ČGS, IPR Praha, ČÚZK) k dnešnímu dni. Orientační přehled pro celý dům; plná Prověrka posuzuje i pozemky, zdroje hluku a výšku nad hladinou. Není to právní ani znalecký posudek.</p>
+      <p class="tlumene">Z veřejných map (Geoportál hl. m. Prahy, ČGS, IPR Praha, ČÚZK, OpenStreetMap) k dnešnímu dni. Orientační přehled pro celý dům; plná Prověrka posuzuje i pozemky, zdroje hluku a výšku nad hladinou. Není to právní ani znalecký posudek.</p>
     </details>`;
     const hotove = {};
     const vypln = (x) => {
