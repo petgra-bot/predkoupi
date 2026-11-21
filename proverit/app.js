@@ -388,7 +388,7 @@ const OKOLI_PRAHY = () => (okoliSlib ||= fetch("/proverit/okoli-prahy.json?v=1")
 async function zobrazBudovu(adresa, inz, puvod) {
   nacitam("Načítám údaje o budově…");
   const [b, okoli] = await Promise.all([budovy([adresa.so]).then((x) => x[adresa.so]), OKOLI_PRAHY()]);
-  if (!b) throw new Error("Budovu k adrese se v RÚIAN nepodařilo načíst");
+  if (!b) throw new Error("K této adrese se v katastru nepodařilo načíst budovu");
   const vOkoli = okoli.has(b.castobce);
   const obec = (adresa.adresa.match(/\d{5}\s+(.+)$/)?.[1] || adresa.adresa.split(",").pop()).trim();
   const mcSlib = mestskaCast(b.momc).catch(() => null);   // nečekáme: doplní se do tabulky, až přijde
@@ -466,8 +466,15 @@ async function zobrazBudovu(adresa, inz, puvod) {
     zobrazBudovu(alternativy[+btn.dataset.alt], inz, { jak: "vybráno z nabídky", jistota: "jistá" }).catch(chyba)));
 }
 
+// Technické chyby (výpadek sítě nebo služby katastru) lidem neukazovat doslova – „Failed to fetch. Zkuste…“ mátlo
+// (recenze známého Petra, 21. 11. 2026). Naše vlastní české hlášky zůstávají.
 function chyba(err) {
-  $("vysledek").innerHTML = karta("chyba", "Něco se nepovedlo", `<p>${esc(err.message)}. Zkuste to prosím znovu, případně zadejte adresu.</p>`);
+  const zprava = String(err?.message || "");
+  const technicka = !zprava || /fetch|network|NetworkError|Load failed|abort|JSON|služba odpověděla|chyba služby|Unexpected|undefined|null/i.test(zprava);
+  const text = technicka
+    ? "Veřejná mapová služba katastru teď neodpověděla. Zkuste to prosím za chvíli znovu – většinou to pomůže hned na druhý pokus."
+    : `${zprava.replace(/\.$/, "")}. Zkuste to prosím znovu, případně zadejte adresu jako na dopise (např. Karlická 910/49, Radotín).`;
+  $("vysledek").innerHTML = karta("chyba", technicka ? "Služba katastru teď neodpovídá" : "Něco se nepovedlo", `<p>${esc(text)}</p>`);
 }
 
 const BEZ_ULICE = `V odkazu není obec ani ulice. Zadejte prosím adresu nemovitosti do pole nahoře, sdělí vám ji makléř nebo prodávající.`;
@@ -766,7 +773,8 @@ async function overit(e) {
     const kand = adresy.length ? adresy : await geokoduj(text, 10);
     if (!kand.length) {
       $("vysledek").innerHTML = karta("chyba", "Adresu se nepodařilo najít",
-        `<p>V registru adres RÚIAN jsme nic nenašli. Zkontrolujte ulici a číslo, případně přidejte část obce.</p>`);
+        `<p>V katastru jsme takovou adresu nenašli. Napište ji prosím jako na dopise – ulice, číslo domu a obec nebo část obce
+        (např. Karlická 910/49, Radotín). Jednodušší je vložit odkaz na inzerát.</p>`);
     } else if (adresy.length === 1) {
       const [a] = await adresyUBodu(adresy[0].location.y, adresy[0].location.x, 1);
       await zobrazBudovu(a, null, { jak: "adresa zadaná uživatelem", jistota: "jistá", start });

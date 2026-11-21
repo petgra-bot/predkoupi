@@ -22,22 +22,35 @@ JIH, SEVER, ZAPAD, VYCHOD = 49.76, 50.32, 14.07, 14.98
 
 
 def druh(t):
+    """Kód místa: p potraviny, s škola, k školka, a lékárna, h hřiště nebo park,
+    m metro, v vlak, t tramvaj, z autobus (rozšířeno 21. 11. 2026, recenze: „vybavenost by šla trochu rozšířit“)."""
     if t.get("shop") in ("supermarket", "convenience", "greengrocer"):
         return "p"   # potraviny
-    if t.get("amenity") == "school":
+    am = t.get("amenity")
+    if am == "school":
         return "s"
-    if t.get("amenity") == "kindergarten":
+    if am == "kindergarten":
         return "k"
-    if (t.get("highway") == "bus_stop" or t.get("railway") in ("tram_stop", "station", "halt")
-            or t.get("station") == "subway" or (t.get("public_transport") == "stop_position" and t.get("tram") == "yes")):
-        return "z"   # zastávka MHD
+    # Lékaře OSM v Praze zachycuje jen zčásti (cca 400 míst) – „lékař dál než 1 km“ by klamal, proto ne.
+    if am == "pharmacy" or t.get("healthcare") == "pharmacy":
+        return "a"
+    if t.get("leisure") in ("playground", "park"):
+        return "h"
+    if t.get("station") == "subway" or (t.get("railway") == "station" and t.get("subway") == "yes"):
+        return "m"
+    if t.get("railway") in ("station", "halt") and t.get("station") not in ("subway", "light_rail"):
+        return "v"
+    if t.get("railway") == "tram_stop" or (t.get("public_transport") == "stop_position" and t.get("tram") == "yes"):
+        return "t"
+    if t.get("highway") == "bus_stop":
+        return "z"   # autobus
     return None
 
 
 class Sber(osmium.SimpleHandler):
     def __init__(self):
         super().__init__()
-        self.body = {"p": set(), "s": set(), "k": set(), "z": set()}
+        self.body = {k: set() for k in "pskahmvtz"}
 
     def _pridej(self, d, lat, lon):
         if d and JIH <= lat <= SEVER and ZAPAD <= lon <= VYCHOD:

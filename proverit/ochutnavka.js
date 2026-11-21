@@ -22,7 +22,7 @@ const OCH_HLUK_OKOLI = ["Silnice", "Zeleznice", "Letiste", "Aglomerace_Silnice",
 const OCH_UAP_VRSTVY = "all:2,3,4,5,6,7,8,9,10,12,13,14,15,16,17,18,19,21,22,23,24,25,26,27,28,29,36,37";
 // Vybavenost z OpenStreetMap: předem stažený soubor na našem webu (test/vybavenost.py), načte se jednou za návštěvu.
 let ochVybavenostSlib = null;
-const OCH_VYBAVENOST = () => (ochVybavenostSlib ||= fetch("/proverit/vybavenost.json?v=1").then((r) => {
+const OCH_VYBAVENOST = () => (ochVybavenostSlib ||= fetch("/proverit/vybavenost.json?v=2").then((r) => {
   if (!r.ok) { ochVybavenostSlib = null; throw new Error(`vybavenost ${r.status}`); }
   return r.json();
 }));
@@ -283,7 +283,8 @@ function ochutnavkaOblasti(dum, rodinny = true, oblast = "praha", obec = "") {
     // neodpověděl vůbec (Petr 21. 11. 2026). Nejbližší místa počítáme tady, žádný další dotaz.
     const data = await dataP;
     const km = (la, lo) => { const k = Math.PI / 180, a = Math.sin((la - lat) * k / 2) ** 2 + Math.cos(lat * k) * Math.cos(la * k) * Math.sin((lo - lon) * k / 2) ** 2; return 12742000 * Math.asin(Math.sqrt(a)); };
-    const NAZVY = { p: "potraviny", s: "škola", k: "školka", z: "zastávka MHD" };
+    const NAZVY = { p: "potraviny", s: "škola", k: "školka", a: "lékárna", h: "hřiště nebo park",
+      m: "metro", v: "vlak", t: "tramvaj", z: "autobus" };
     const nej = {};
     for (const [kod, nazev] of Object.entries(NAZVY)) {
       const b = data[kod] || [];
@@ -294,7 +295,11 @@ function ochutnavkaOblasti(dum, rodinny = true, oblast = "praha", obec = "") {
       }
     }
     const zaokr = (d) => d < 100 ? `${Math.max(10, Math.round(d / 10) * 10)} m` : `${Math.round(d / 50) * 50} m`;
-    const text = ["potraviny", "škola", "školka", "zastávka MHD"].map((n) => `${n} ${n in nej ? zaokr(nej[n]) : "dál než 1 km"}`).join(" · ");
+    // Rozšířeno 21. 11. 2026 (recenze): lékárna, hřiště nebo park a druh dopravy (metro, vlak, tramvaj, autobus do 1 km).
+    const zakl = ["potraviny", "škola", "školka", "lékárna", "hřiště nebo park"]
+      .map((n) => `${n} ${n in nej ? zaokr(nej[n]) : "dál než 1 km"}`).join(" · ");
+    const doprava = ["metro", "vlak", "tramvaj", "autobus"].filter((n) => n in nej).map((n) => `${n} ${zaokr(nej[n])}`);
+    const text = `${zakl} · doprava: ${doprava.length ? doprava.join(", ") : "zastávka dál než 1 km"}`;
     return radek("Vybavenost", "info", `Nejblíž vzdušnou čarou: ${text}.`);
   })();
   let { povodne: pov, hluk: hl, plan: pl, okoli: ok, stavby: st } = oblast === "okoli" ? ochutnavkaOkoli(dum, rodinny, obec)
