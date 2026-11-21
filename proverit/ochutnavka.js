@@ -209,9 +209,9 @@ function ochutnavkaOblasti(dum, rodinny = true) {
       if (!zamery.has(kod) || zamery.get(kod).vzd > vzd) zamery.set(kod, z);
     }
     const z = [...zamery.values()].sort((a, b) => a.vzd - b.vzd);
-    if (!z.length) return radek("Stavby v okolí", "zelena", "Do 300 m od domu město neeviduje plánované stavby ani dopravní záměry.");
+    if (!z.length) return radek("Plánované stavby", "zelena", "Do 300 m od domu město neeviduje plánované stavby ani dopravní záměry.");
     const seznam = z.slice(0, 3).map((x) => `${x.nazev}${x.co ? ` (${x.co})` : ""} ${x.vzd < 1 ? "zasahuje k domu" : `${x.vzd} m`}`).join("; ");
-    return radek("Stavby v okolí", z[0].vzd <= 100 ? "oranzova" : "info",
+    return radek("Plánované stavby", z[0].vzd <= 100 ? "oranzova" : "info",
       `Plánované záměry do 300 m: ${seznam}${z.length > 3 ? ` a další ${z.length - 3}` : ""}. Posudky vlivu na okolí prověříme v Prověrce.`);
   })();
   const vybavenost = (async () => {
@@ -241,7 +241,15 @@ function ochutnavkaOblasti(dum, rodinny = true) {
     const text = ["potraviny", "škola", "školka", "zastávka MHD"].map((n) => `${n} ${n in nej ? zaokr(nej[n]) : "dál než 1 km"}`).join(" · ");
     return radek("Vybavenost", "info", `Nejblíž vzdušnou čarou: ${text} (OpenStreetMap).`);
   })();
-  return { "Povodně": povodne, "Hluk": hluk, "Radon": radon, "Územní plán": plan, "Rizika v okolí": okoli, "Stavby v okolí": stavby, "Vybavenost": vybavenost };
+  // Povodně a radon jednou řádkou jako v reportu (oblast „Povodně a radon“, Petr 21. 11. 2026): horší barva rozhoduje.
+  const PORADI = { cervena: 0, oranzova: 1, seda: 2, zelena: 3, info: 4 };
+  const povodneRadon = Promise.allSettled([povodne, radon]).then(([pv, rd]) => {
+    const casti = [pv.status === "fulfilled" ? pv.value : { barva: "seda", text: "Mapa záplav teď neodpověděla; ověříme v Prověrce." },
+      rd.status === "fulfilled" ? rd.value : { barva: "seda", text: "Mapa radonu teď neodpověděla." }];
+    const barva = casti.map((c) => c.barva).sort((a, b) => PORADI[a] - PORADI[b])[0];
+    return radek("Povodně a radon", barva, `Povodně: ${casti[0].text.replace(/^./, (c) => c.toLowerCase())} Radon: ${casti[1].text.replace(/^Radonový index/, "index").replace(/^./, (c) => c.toLowerCase())}`);
+  });
+  return { "Povodně a radon": povodneRadon, "Hluk": hluk, "Územní plán": plan, "Rizika v okolí": okoli, "Vybavenost": vybavenost, "Plánované stavby": stavby };
 }
 
 // ---------- zobrazení ----------
