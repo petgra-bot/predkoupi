@@ -26,7 +26,7 @@ const OCH_VYBAVENOST = () => (ochVybavenostSlib ||= fetch("/proverit/vybavenost.
   if (!r.ok) { ochVybavenostSlib = null; throw new Error(`vybavenost ${r.status}`); }
   return r.json();
 }));
-const OCH_STAV = { zelena: "V pořádku", oranzova: "Pozor", cervena: "Riziko", seda: "Nezjištěno", info: "Informace" };
+const OCH_STAV = { zelena: "V pořádku", oranzova: "Ověřit", cervena: "Riziko", seda: "Nezjištěno", info: "Informace" };
 // Radon: oranžově tam, kde doporučujeme měření (index 3, u rodinného domu i 2) – zelená s úkolem „změřte“ mátla (hodnocení 13. 11.).
 const ochRadonBarva = (idx, rodinny) => idx === 3 || (rodinny && idx === 2) ? "oranzova" : idx === 1 || idx === 2 ? "zelena" : "seda";
 const OCH_AREALY = {

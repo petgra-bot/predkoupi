@@ -141,7 +141,7 @@
   }
 
   // ---------- výsledek: bílá stránka s reportem pro mobil i počítač ----------
-  const BARVY = { cervena: "Riziko", oranzova: "Pozor", zelena: "V pořádku", seda: "Nezjištěno", zamceno: "V Prověrce PLUS" };
+  const BARVY = { cervena: "Riziko", oranzova: "Ověřit", zelena: "V pořádku", seda: "Nezjištěno", zamceno: "V Prověrce PLUS" };
   const FAZE = { "pred-rezervaci": "Před rezervací", "pred-podpisem": "Před podpisem kupní smlouvy", "pri-prevodu": "Při převodu a po koupi",
                  "pred-drazbou": "Před dražbou", "po-priklepu": "Po příklepu" };
   const stitek = (b) => `<span class="rp-stitek ${esc(b)}">${esc(BARVY[b] || b)}</span>`;
