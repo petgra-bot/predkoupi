@@ -295,7 +295,7 @@ function ochutnavkaOblasti(dum, rodinny = true, oblast = "praha", obec = "") {
     }
     const zaokr = (d) => d < 100 ? `${Math.max(10, Math.round(d / 10) * 10)} m` : `${Math.round(d / 50) * 50} m`;
     const text = ["potraviny", "škola", "školka", "zastávka MHD"].map((n) => `${n} ${n in nej ? zaokr(nej[n]) : "dál než 1 km"}`).join(" · ");
-    return radek("Vybavenost", "info", `Nejblíž vzdušnou čarou: ${text} (OpenStreetMap).`);
+    return radek("Vybavenost", "info", `Nejblíž vzdušnou čarou: ${text}.`);
   })();
   let { povodne: pov, hluk: hl, plan: pl, okoli: ok, stavby: st } = oblast === "okoli" ? ochutnavkaOkoli(dum, rodinny, obec)
     : { povodne, hluk, plan, okoli, stavby };
