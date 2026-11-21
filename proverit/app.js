@@ -44,7 +44,12 @@ async function geokoduj(text, pocet = 10) {
 // Varianty zadané adresy pro geokodér (W2a, 12. 11. 2026): geokodér zná poštovní „Praha 5“ a části obce („Radotín“),
 // ale ne správní obvody („Praha 16“), „Praha 16 - Radotín“ ani PSČ s mezerou („153 00“).
 function variantyAdresy(text) {
-  const t = text.replace(/\s+/g, " ").trim();
+  // Mapy.cz a Google píšou „Černošice ev. č. 128, 252 28 Černošice, Česko“, RÚIAN „č.ev. 128, 25228 Černošice“
+  // (chaty a rekreační objekty s číslem evidenčním; Petr 21. 11. 2026). Sjednotit zápis, zahodit „Česko“ a obec před číslem.
+  const t = text.replace(/\s+/g, " ").trim()
+    .replace(/,?\s*(Česko|Česká republika|Czechia)\s*$/i, "")
+    .replace(/\b(?:ev\.\s*č\.|č\.\s*ev\.)\s*(\d+)/gi, "č.ev. $1")
+    .replace(/^[^,\d]+?\s+(č\.ev\. \d+)/, "$1");
   const bezMezeryPsc = t.replace(/\b(\d{3}) (\d{2})\b/g, "$1$2");
   const m = t.match(/Praha[\s-]*(\d{1,2})?(?:\s*[-–]\s*([^,\d]+))?/i);
   const castZPrahy = m?.[2]?.trim();
