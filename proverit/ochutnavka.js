@@ -186,7 +186,7 @@ function ochutnavkaOblasti(dum, rodinny = true) {
       const d = Math.round(ochVzdalenost(dum, f.geometry));
       if (d <= def[0]) { nalezy.push(`${def[1]} ${d} m`); barva = "oranzova"; }
     }
-    return radek("Okolí", barva, nalezy.length ? `V okolí: ${[...new Set(nalezy)].join("; ")}.` : "Bez průmyslu, čistírny, střelnice či vedení velmi vysokého napětí v blízkosti.");
+    return radek("Rizika v okolí", barva, nalezy.length ? `V okolí: ${[...new Set(nalezy)].join("; ")}.` : "Bez průmyslu, čistírny, střelnice či vedení velmi vysokého napětí v blízkosti.");
   })();
   const stavby = (async () => {
     // Záměry do 300 m (identify: tolerance v pixelech, 1 px = 1 m). Posudky EIA jen v Prověrce – portál CENIA z prohlížeče číst nejde.
@@ -242,7 +242,7 @@ function ochutnavkaOblasti(dum, rodinny = true) {
     const text = ["potraviny", "škola", "školka", "zastávka MHD"].map((n) => `${n} ${n in nej ? zaokr(nej[n]) : "dál než 1 km"}`).join(" · ");
     return radek("Vybavenost", "info", `Nejblíž vzdušnou čarou: ${text} (OpenStreetMap).`);
   })();
-  return { "Povodně": povodne, "Hluk": hluk, "Radon": radon, "Územní plán": plan, "Okolí": okoli, "Stavby v okolí": stavby, "Vybavenost": vybavenost };
+  return { "Povodně": povodne, "Hluk": hluk, "Radon": radon, "Územní plán": plan, "Rizika v okolí": okoli, "Stavby v okolí": stavby, "Vybavenost": vybavenost };
 }
 
 // ---------- zobrazení ----------

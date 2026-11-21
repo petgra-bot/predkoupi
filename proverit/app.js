@@ -116,6 +116,9 @@ function typBudovy(b) {
   const zpusob = ZPUSOB_VYUZITI[b.zpusobvyuzitikod] || "jiný";
   if (b.zpusobvyuzitikod === 6 || (b.pocetbytu || 0) > 3) return { typ: "bytový dům", zpusob };
   if ([2, 3, 7, 8].includes(b.zpusobvyuzitikod)) return { typ: "rodinný dům", zpusob };
+  // Víceúčelová stavba, obchod, kanceláře… s byty (polyfunkční dům, Libušská 313, Petr 21. 11. 2026): prodávají se v ní
+  // byty jako v bytovém domě – katastr je vede jako jednotky, prověrka funguje stejně.
+  if ((b.pocetbytu || 0) >= 1) return { typ: "bytový dům", zpusob };
   return { typ: "jiná stavba", zpusob };
 }
 
