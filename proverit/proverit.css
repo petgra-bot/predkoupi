@@ -279,3 +279,16 @@ button.odkaz { font: inherit; color: inherit; background: none; border: 0; paddi
 .snimek-vlozit:active { transform: scale(.98); }
 .snimek-hlaska:empty { display: none; }
 .snimek-hlaska { color: var(--oranzova-t); font-size: .9rem; }
+
+/* Přehled zdarma: neutrální řádky a přehled e-mailem (Petr 21. 11. 2026) */
+.och-znacka.info { background: transparent; color: var(--text-t); border: 1px solid rgba(255,255,255,.55); }
+.och-email { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--linka-t); }
+.och-email > label:first-child { display: block; font-weight: 700; margin-bottom: 8px; }
+.och-email-radek { display: flex; gap: 8px; flex-wrap: wrap; }
+.och-email-radek input { flex: 1 1 220px; min-height: 44px; padding: 10px 12px; font: 16px "Montserrat", sans-serif; border: 1px solid rgba(255,255,255,.4); background: transparent; color: var(--text-t); }
+.och-email-radek button { min-height: 44px; padding: 0 18px; font: 600 .75rem "Montserrat", sans-serif; text-transform: uppercase; letter-spacing: .08em; background: var(--bila); color: var(--navy); border: 0; cursor: pointer; touch-action: manipulation; }
+.och-email-radek button:disabled { opacity: .6; cursor: default; }
+.och-email-tipy { display: flex; gap: 8px; align-items: flex-start; margin-top: 10px; font-size: .85rem; color: var(--slabe-t); cursor: pointer; }
+.och-email-tipy input { margin-top: 3px; width: 18px; height: 18px; flex: none; }
+.och-email-stav:empty { display: none; }
+.och-email-stav { margin: 10px 0 0; font-size: .9rem; }
