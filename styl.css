@@ -313,3 +313,13 @@ h2.h3 { font-size: 0.9375rem; font-weight: 700; letter-spacing: .02em; line-heig
 .vzor-cast img { width: 100%; height: auto; border: 1px solid var(--linka); box-shadow: 0 18px 40px rgba(8,12,30,.12); }
 .clanek .odkaz-dal { font-weight: 600; margin-left: 12px; }
 .nadpis-plus { margin-top: 64px !important; padding-top: 28px; border-top: 2px solid var(--navy); }
+
+/* Přehled zdarma (Petr 25. 11. 2026, to-do 37): pruh s polem na adresu dole na stránkách a v rámečku průvodců */
+.zdarma-pruh { align-items: flex-end; }
+.zdarma-pruh > div:first-child { max-width: 38ch; }
+.zdarma-pruh .stitek { display: block; margin-bottom: 8px; }
+.zdarma-pruh p.zdarma-co { font-size: 0.9375rem; font-weight: 500; color: var(--na-tmave); margin-top: 8px; }
+.zdarma-pruh .zadani { flex: 1 1 420px; max-width: 560px; }
+.ramecek .zadani { margin: 6px 0 14px; }
+.ramecek .zadani label { color: var(--na-tmave-slabe); }
+.cena.zdarma { border-top: 4px solid var(--navy); }

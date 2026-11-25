@@ -23,7 +23,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/styl.css?v=22">
+<link rel="stylesheet" href="/styl.css?v=23">
 <script type="application/ld+json">
 {"@context":"https://schema.org","@graph":[
  {"@type":"Article","headline":"Kontrola bytu před koupí: co prověřit a kde to najdete","inLanguage":"cs","datePublished":"2026-11-18","dateModified":"2026-11-18",
@@ -159,7 +159,13 @@
 </article>
 
 <section class="tmave" aria-label="Začít">
-  <div class="obal dalsi-krok"><p>Chcete vědět, jak je na tom konkrétní byt?</p><a class="tl svetle" href="/#zacit">Prověřit zdarma</a></div>
+  <div class="obal dalsi-krok zdarma-pruh">
+    <div><span class="stitek">Přehled zdarma · bez registrace</span><p>Chcete vědět, jak je na tom konkrétní byt?</p><p class="zdarma-co">Povodně, hluk, radon, územní plán, okolí a&nbsp;vybavenost do 10 vteřin.</p></div>
+    <form class="zadani" action="/proverit/" method="get">
+      <label for="vstup-dole">Odkaz na inzerát nebo adresa</label>
+      <div class="pole"><input id="vstup-dole" name="q" type="text" required autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="go" placeholder="Karlická 49, Radotín"><button class="tl svetle" type="submit">Prověřit zdarma</button></div>
+    </form>
+  </div>
 </section>
 </main>
 
@@ -170,7 +176,7 @@
         <a class="logo" href="/" aria-label="Před koupí – úvod"><img src="/logo-bile.svg" alt="Před koupí" width="188" height="34"><span>prověření bytu a&nbsp;domu</span></a>
         <p style="margin-top:14px;max-width:40ch">Prověření bytu a&nbsp;rodinného domu v&nbsp;Praze a&nbsp;okolí před koupí. Nejde o&nbsp;právní ani znalecký posudek.</p>
       </div>
-      <div><h2>Služby</h2><ul><li><a href="/#ceny">Ochutnávka zdarma</a></li><li><a href="/#ceny">Prověrka</a></li><li><a href="/#ceny">Prověrka PLUS</a></li><li><a href="/vzorovy-report.html">Vzorový report</a></li></ul></div>
+      <div><h2>Služby</h2><ul><li><a href="/#ceny">Přehled zdarma</a></li><li><a href="/#ceny">Prověrka</a></li><li><a href="/#ceny">Prověrka PLUS</a></li><li><a href="/vzorovy-report.html">Vzorový report</a></li></ul></div>
       <div><h2>Informace</h2><ul><li><a href="/co-zjistite.html">Co zjistíte</a></li><li><a href="/pruvodce/">Průvodce koupí</a></li><li><a href="/dotazy.html">Časté dotazy</a></li></ul></div>
       <div><h2>Kontakt</h2><ul><li><a href="mailto:info@predkoupi.cz">info@predkoupi.cz</a></li><li><a href="tel:+420607540520">+420&nbsp;607&nbsp;540&nbsp;520</a></li><li><a href="https://www.facebook.com/predkoupi" rel="noopener">Facebook</a></li></ul></div>
     </div>
