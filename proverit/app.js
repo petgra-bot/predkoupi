@@ -379,10 +379,10 @@ async function vyberNaMape(vsechny, kandidati, uvod, inz) {
     zobrazBudovu(vybranyDum, inz, { jak: "vybráno na mapě", jistota: "jistá" }).catch(chyba));
 }
 
-// Okolí Prahy (okresy Praha-východ a Praha-západ, Petr 21. 11. 2026): rozhoduje kód části obce budovy z RÚIAN, ne název
+// Středočeský kraj (Petr 21. 11. 2026 okresy Praha-východ a Praha-západ, 25. 11. celý kraj): rozhoduje kód části obce budovy z RÚIAN, ne název
 // obce (názvy se v ČR opakují). Seznam z nemo/nastroje/data/obce_okoli_prahy.json.
 let okoliSlib = null;
-const OKOLI_PRAHY = () => (okoliSlib ||= fetch("/proverit/okoli-prahy.json?v=1").then((r) => r.json())
+const OKOLI_PRAHY = () => (okoliSlib ||= fetch("/proverit/okoli-prahy.json?v=2").then((r) => r.json())
   .then((d) => new Set(d.casti_obce)).catch(() => { okoliSlib = null; return new Set(); }));
 
 async function zobrazBudovu(adresa, inz, puvod) {
@@ -450,7 +450,7 @@ async function zobrazBudovu(adresa, inz, puvod) {
       <div class="akce"><a class="tl tmave-tl" href="/#ceny">Co obsahuje Prověrka</a></div><div class="co-dal-zajem" data-zajem data-zdroj="proverit"></div></div>`
       // Mimo Prahu (W11, 12. 11. 2026): měříme zájem – e-mail a obec, ať víme, kam službu rozšířit.
       : `<div class="co-dal"><h3>Tady zatím neprověřujeme</h3>
-      <p>Prověrku děláme v Praze a v okresech Praha-východ a Praha-západ. Podle zájmu přidáme další obce.</p>
+      <p>Prověrku děláme v Praze a ve Středočeském kraji. Podle zájmu přidáme další kraje.</p>
       <div class="co-dal-zajem" data-zajem data-zdroj="${esc(("mimo:" + obec).slice(0, 40))}" data-stitek="E-mail pro oznámení, až budeme prověřovat i v obci ${esc(obec)}"
         data-souhlas="Pošleme jedinou zprávu, až službu rozšíříme do vaší obce, a pak e-mail smažeme. Ukládáme jen e-mail a název obce."
         data-hotovo="až budeme prověřovat i ve vaší obci"></div></div>`);

@@ -3,7 +3,7 @@
 Veřejné servery Overpass jsou z prohlížeče pomalé a často neodpoví, proto data stáhneme jednou dopředu do malého
 souboru na webu (proverit/vybavenost.json) a přehled spočítá nejbližší místa přímo v prohlížeči.
 
-Obnova (stačí jednou za 3 měsíce; od 21. 11. 2026 i okresy Praha-východ a Praha-západ):
+Obnova (stačí jednou za 3 měsíce; od 25. 11. 2026 celý Středočeský kraj):
   curl -o /tmp/Prag.osm.pbf https://download.bbbike.org/osm/bbbike/Prag/Prag.osm.pbf
   curl -o /tmp/sk.osm.pbf https://download.openstreetmap.fr/extracts/europe/czech_republic/stredocesky-latest.osm.pbf
   pip install osmium
@@ -17,8 +17,8 @@ from pathlib import Path
 
 import osmium
 
-# Praha a okresy Praha-východ a Praha-západ (obdélník okresů z RÚIAN; zbytek kraje by soubor jen zvětšil).
-JIH, SEVER, ZAPAD, VYCHOD = 49.76, 50.32, 14.07, 14.98
+# Praha a Středočeský kraj (obdélník 12 okresů z RÚIAN; Petr 25. 11. 2026).
+JIH, SEVER, ZAPAD, VYCHOD = 49.40, 50.66, 13.29, 15.61
 
 
 def druh(t):

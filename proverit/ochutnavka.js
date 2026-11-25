@@ -22,7 +22,7 @@ const OCH_HLUK_OKOLI = ["Silnice", "Zeleznice", "Letiste", "Aglomerace_Silnice",
 const OCH_UAP_VRSTVY = "all:2,3,4,5,6,7,8,9,10,12,13,14,15,16,17,18,19,21,22,23,24,25,26,27,28,29,36,37";
 // Vybavenost z OpenStreetMap: předem stažený soubor na našem webu (test/vybavenost.py), načte se jednou za návštěvu.
 let ochVybavenostSlib = null;
-const OCH_VYBAVENOST = () => (ochVybavenostSlib ||= fetch("/proverit/vybavenost.json?v=2").then((r) => {
+const OCH_VYBAVENOST = () => (ochVybavenostSlib ||= fetch("/proverit/vybavenost.json?v=3").then((r) => {
   if (!r.ok) { ochVybavenostSlib = null; throw new Error(`vybavenost ${r.status}`); }
   return r.json();
 }));
