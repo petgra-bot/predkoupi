@@ -324,14 +324,16 @@ h2.h3 { font-size: 0.9375rem; font-weight: 700; letter-spacing: .02em; line-heig
 .ramecek .zadani label { color: var(--na-tmave-slabe); }
 .cena.zdarma { border-top: 4px solid var(--navy); }
 
-/* Pozadí úvodu: síť ulic centra Prahy (RÚIAN, ČÚZK; Petr 25. 11. 2026 vybral variantu C, to-do 11). Slábne doleva k textu. */
+/* Pozadí úvodu: fotka Petra v tónech tmavě modré (Petr 25. 11. 2026 vybral variantu C, to-do 11; dřív síť ulic). Slábne doleva k textu. */
 .uvod { position: relative; overflow: hidden; }
 .uvod > .obal { position: relative; z-index: 1; }
-.uvod::before { content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .11;
-  background: url(/obrazky/pozadi-ulice.svg) right center / cover no-repeat;
-  -webkit-mask-image: linear-gradient(90deg, transparent 0%, rgba(0,0,0,.35) 30%, #000 60%);
-          mask-image: linear-gradient(90deg, transparent 0%, rgba(0,0,0,.35) 30%, #000 60%); }
-@media (max-width: 700px) { .uvod::before { opacity: .09;
-  -webkit-mask-image: linear-gradient(180deg, #000 0%, rgba(0,0,0,.4) 60%, transparent 100%);
-          mask-image: linear-gradient(180deg, #000 0%, rgba(0,0,0,.4) 60%, transparent 100%); } }
-@media (prefers-reduced-data: reduce) { .uvod::before { display: none; } }
+.uvod::before { content: ""; position: absolute; top: 0; right: 0; bottom: 0; width: 66%; pointer-events: none;
+  background: url(/obrazky/uvod-foto.webp) center 35% / cover no-repeat; }
+.uvod::after { content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(90deg, var(--navy) 34%, rgba(30,38,69,.78) 50%, rgba(30,38,69,.25) 76%, rgba(30,38,69,.35)),
+              linear-gradient(0deg, rgba(30,38,69,.65), transparent 32%); }
+@media (max-width: 700px) {
+  .uvod { padding-bottom: 300px; }
+  .uvod::before { top: auto; width: 100%; height: 380px; background-image: url(/obrazky/uvod-foto-mobil.webp); background-position: 60% 30%; }
+  .uvod::after { background: linear-gradient(180deg, var(--navy) 0%, var(--navy) calc(100% - 380px), rgba(30,38,69,.55) calc(100% - 250px), rgba(30,38,69,.3) 100%); } }
+@media (prefers-reduced-data: reduce) { .uvod::before, .uvod::after { display: none; } .uvod { padding-bottom: clamp(44px, 6vw, 76px); } }
