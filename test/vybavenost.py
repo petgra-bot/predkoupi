@@ -3,11 +3,14 @@
 Veřejné servery Overpass jsou z prohlížeče pomalé a často neodpoví, proto data stáhneme jednou dopředu do malého
 souboru na webu (proverit/vybavenost.json) a přehled spočítá nejbližší místa přímo v prohlížeči.
 
-Obnova (stačí jednou za 3 měsíce; od 25. 11. 2026 celý Středočeský kraj):
+Obnova (stačí jednou za 3 měsíce; od 25. 11. 2026 celý Středočeský kraj, od 26. 11. 2026 Pardubický kraj zvlášť,
+aby prohlížeč v Praze nestahoval data celé republiky):
   curl -o /tmp/Prag.osm.pbf https://download.bbbike.org/osm/bbbike/Prag/Prag.osm.pbf
   curl -o /tmp/sk.osm.pbf https://download.openstreetmap.fr/extracts/europe/czech_republic/stredocesky-latest.osm.pbf
+  curl -o /tmp/pce.osm.pbf https://download.openstreetmap.fr/extracts/europe/czech_republic/pardubicky-latest.osm.pbf
   pip install osmium
-  python3 test/vybavenost.py /tmp/Prag.osm.pbf /tmp/sk.osm.pbf
+  python3 test/vybavenost.py praha /tmp/Prag.osm.pbf /tmp/sk.osm.pbf
+  python3 test/vybavenost.py pardubicky /tmp/pce.osm.pbf
 Licence dat: © přispěvatelé OpenStreetMap, ODbL (uvádíme u řádku Vybavenost a ve zdrojích přehledu).
 """
 import json
@@ -17,8 +20,13 @@ from pathlib import Path
 
 import osmium
 
-# Praha a Středočeský kraj (obdélník 12 okresů z RÚIAN; Petr 25. 11. 2026).
-JIH, SEVER, ZAPAD, VYCHOD = 49.40, 50.66, 13.29, 15.61
+# Obdélníky krajů z RÚIAN (+ cca 3 km, aby dům u hranice kraje viděl obchod za ní). Soubor a obdélník musí sedět
+# s OCH_VYBAVENOST_SOUBORY v proverit/ochutnavka.js.
+OBLASTI = {
+    "praha": ("vybavenost.json", (49.40, 50.66, 13.29, 15.61)),              # Praha a Středočeský kraj (Petr 25. 11. 2026)
+    "pardubicky": ("vybavenost-pardubicky.json", (49.47, 50.28, 15.30, 17.00)),  # Pardubický kraj (Petr 26. 11. 2026)
+}
+JIH = SEVER = ZAPAD = VYCHOD = None
 
 
 def druh(t):
@@ -74,12 +82,14 @@ class Sber(osmium.SimpleHandler):
 
 
 def main():
+    global JIH, SEVER, ZAPAD, VYCHOD
+    nazev, (JIH, SEVER, ZAPAD, VYCHOD) = OBLASTI[sys.argv[1]]
     s = Sber()
-    for soubor in sys.argv[1:]:
+    for soubor in sys.argv[2:]:
         s.apply_file(soubor, locations=True)
     vystup = {"zdroj": "© přispěvatelé OpenStreetMap (ODbL)", "stav": date.today().isoformat(),
               **{k: [x for b in sorted(v) for x in b] for k, v in s.body.items()}}   # ploché pole lat, lon, lat, lon…
-    cil = Path(__file__).resolve().parent.parent / "proverit" / "vybavenost.json"
+    cil = Path(__file__).resolve().parent.parent / "proverit" / nazev
     cil.write_text(json.dumps(vystup, separators=(",", ":")))
     print(cil, f"{cil.stat().st_size // 1024} kB", {k: len(v) for k, v in s.body.items()})
 

@@ -20,10 +20,15 @@ const OCH = {
 const OCH_HLUK_OKOLI = ["Silnice", "Zeleznice", "Letiste", "Aglomerace_Silnice", "Aglomerace_Zeleznice"];
 // Plánované záměry města (územně analytické podklady) – stejné vrstvy jako uzemni_plan.py; v prohlížeči jedním dotazem identify.
 const OCH_UAP_VRSTVY = "all:2,3,4,5,6,7,8,9,10,12,13,14,15,16,17,18,19,21,22,23,24,25,26,27,28,29,36,37";
-// Vybavenost z OpenStreetMap: předem stažený soubor na našem webu (test/vybavenost.py), načte se jednou za návštěvu.
-let ochVybavenostSlib = null;
-const OCH_VYBAVENOST = () => (ochVybavenostSlib ||= fetch("/proverit/vybavenost.json?v=3").then((r) => {
-  if (!r.ok) { ochVybavenostSlib = null; throw new Error(`vybavenost ${r.status}`); }
+// Vybavenost z OpenStreetMap: předem stažené soubory na našem webu (test/vybavenost.py), každý se načte jednou za návštěvu.
+// Po krajích (Petr 26. 11. 2026), aby prohlížeč v Praze nestahoval data dalších krajů; obdélníky jako v test/vybavenost.py.
+const OCH_VYBAVENOST_SOUBORY = [
+  ["/proverit/vybavenost.json?v=3", [49.40, 50.66, 13.29, 15.61]],              // Praha a Středočeský kraj
+  ["/proverit/vybavenost-pardubicky.json?v=1", [49.47, 50.28, 15.30, 17.00]],   // Pardubický kraj
+];
+const ochVybavenostSliby = {};
+const OCH_VYBAVENOST = (url) => (ochVybavenostSliby[url] ||= fetch(url).then((r) => {
+  if (!r.ok) { delete ochVybavenostSliby[url]; throw new Error(`vybavenost ${r.status}`); }
   return r.json();
 }));
 const OCH_STAV = { zelena: "V pořádku", oranzova: "Ověřit", cervena: "Riziko", seda: "Nezjištěno", info: "Informace" };
@@ -168,7 +173,7 @@ function ochutnavkaOkoli(dum, rodinny, obec) {
     return radek("Hluk", b, `U nejhlučnější fasády celodenní průměr ${ochPasmo(lden)}, v noci ${ochPasmo(ln)}` + (b !== "zelena" ? " – nad doporučením WHO." : "."));
   })();
   const plan = Promise.resolve(radek("Územní plán", "seda",
-    `Územní plán obce${obec ? " " + obec : ""} neprověřujeme – podívejte se do platného plánu obce (web obce nebo mapový portál Středočeského kraje).`));
+    `Územní plán obce${obec ? " " + obec : ""} neprověřujeme – podívejte se do platného plánu obce (web obce nebo mapový portál kraje).`));
   const okoli = (async () => {
     const [vedeni, arealy] = await Promise.all([ochPrvky(`${OCH.ZABAGED}/88`, dum, { vzdalenost: 300, pole: "napeti", geometrie: true }).catch(() => []),
       ochPrvky(`${OCH.ZABAGED}/114`, dum, { vzdalenost: 500, pole: "typzast_k", geometrie: true }).catch(() => [])]);
@@ -272,7 +277,7 @@ function ochutnavkaOblasti(dum, rodinny = true, oblast = "praha", obec = "") {
   })();
   const vybavenost = (async () => {
     // Souřadnice domu ve WGS84 z RÚIAN (body OpenStreetMap jsou ve WGS84); soubor s body se načítá souběžně.
-    const dataP = OCH_VYBAVENOST();
+    const hlavni = OCH_VYBAVENOST(OCH_VYBAVENOST_SOUBORY[0][0]);   // většina adres je v Praze – načítat hned souběžně
     const [x, y] = stred;
     const b = await ochVolej(`${OCH.RUIAN}/3/query`, { geometry: JSON.stringify({ x, y, spatialReference: { wkid: 5514 } }), geometryType: "esriGeometryPoint",
       inSR: 5514, spatialRel: "esriSpatialRelIntersects", distance: 30, units: "esriSRUnit_Meter", outFields: "kod", returnGeometry: true, outSR: 4326 });
@@ -281,7 +286,11 @@ function ochutnavkaOblasti(dum, rodinny = true, oblast = "praha", obec = "") {
     const lon = body.reduce((s, p) => s + p[0], 0) / body.length, lat = body.reduce((s, p) => s + p[1], 0) / body.length;
     // Body z předem staženého souboru (OpenStreetMap, test/vybavenost.py): z prohlížeče byl Overpass pomalý a často
     // neodpověděl vůbec (Petr 21. 11. 2026). Nejbližší místa počítáme tady, žádný další dotaz.
-    const data = await dataP;
+    // Soubory krajů, do jejichž obdélníku dům padne (u hranice i oba), sloučené do jednoho seznamu bodů.
+    const urls = OCH_VYBAVENOST_SOUBORY.filter(([, [j, sv, z, v]]) => lat >= j && lat <= sv && lon >= z && lon <= v).map(([u]) => u);
+    const casti = await Promise.all((urls.length ? urls : [OCH_VYBAVENOST_SOUBORY[0][0]]).map((u) => u === OCH_VYBAVENOST_SOUBORY[0][0] ? hlavni : OCH_VYBAVENOST(u)));
+    const data = {};
+    for (const c of casti) for (const [k, v] of Object.entries(c)) if (Array.isArray(v)) (data[k] ||= []).push(...v);
     const km = (la, lo) => { const k = Math.PI / 180, a = Math.sin((la - lat) * k / 2) ** 2 + Math.cos(lat * k) * Math.cos(la * k) * Math.sin((lo - lon) * k / 2) ** 2; return 12742000 * Math.asin(Math.sqrt(a)); };
     const NAZVY = { p: "potraviny", s: "škola", k: "školka", a: "lékárna", h: "hřiště nebo park",
       m: "metro", v: "vlak", t: "tramvaj", z: "autobus" };
