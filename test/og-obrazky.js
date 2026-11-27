@@ -7,6 +7,7 @@ const logo = 'data:image/svg+xml;base64,'+fs.readFileSync(D+'/logo/final/logo-vo
 const clanky = [
  ['vypis-z-katastru','Průvodce · katastr','Jak číst výpis<br>z katastru','List vlastnictví oddíl po oddílu'],
  ['hlukova-mapa','Průvodce · hluk','Hlukové mapy<br>Prahy','Jak zjistit hluk u bytu před koupí'],
+ ['zaplavova-uzemi','Průvodce · povodně','Záplavová území<br>v Praze','Jak zjistit riziko povodně před koupí'],
  ['fond-oprav-svj','Průvodce · SVJ','Fond oprav SVJ<br>před koupí bytu','Závěrky, úvěry a dluhy prodávajícího'],
  ['vecne-bremeno','Průvodce · katastr','Věcné břemeno<br>při koupi','Co přechází na vás a jak se ruší'],
  ['kontrola-bytu','Průvodce · byt','Kontrola bytu<br>před koupí','Co prověřit a kde to najdete zdarma'],
