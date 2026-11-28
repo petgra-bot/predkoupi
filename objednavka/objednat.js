@@ -181,7 +181,7 @@
           blok.insertAdjacentHTML("afterbegin", `<div class="obj-bez-jednotek" role="alert">
             <p><b>Byt v&nbsp;tomto domě nejde koupit jako samostatnou nemovitost.</b> Podle katastru dům nemá vymezené byty (jednotky) –
             celý patří jednomu vlastníkovi, obvykle obci nebo družstvu. Kupuje se tu nejspíš družstevní podíl, nebo jde o&nbsp;nájem.</p>
-            <p>Prověrka posoudí dům, zápisy v&nbsp;katastru k&nbsp;domu a&nbsp;okolí – ne konkrétní byt ani prodávajícího.</p>
+            <p>Prověrka posoudí dům, zápisy v&nbsp;katastru k&nbsp;domu, jeho vlastníka (družstvo: insolvence a&nbsp;rejstřík firem) a&nbsp;okolí – ne konkrétní byt.</p>
             <label class="obj-souhlas"><input type="checkbox" name="bez_jednotek"><span>Rozumím a&nbsp;chci přesto prověřit dům.</span></label></div>`);
           f.querySelectorAll(".obj-chybne").forEach((k) => vycisti(k.querySelector("input"))); prepocti();
         }).catch(() => { /* bez odpovědi objednávka běží jako dřív */ });
