@@ -219,11 +219,27 @@ function ochutnavkaOblasti(dum, rodinny = true, oblast = "praha", obec = "") {
     return radek("Hluk", b, `U nejhlučnější fasády celodenní průměr ${ochPasmo(lden)}, v noci ${ochPasmo(ln)}` + (b !== "zelena" ? " – nad doporučením WHO." : "."));
   })();
   const radon = (async () => {
-    const f = (await ochVolej(`${OCH.RADON}/1/query`, { where: "1=1", outFields: "radon_idx,radon_popis", returnGeometry: false,
-      geometry: JSON.stringify({ x: stred[0], y: stred[1], spatialReference: { wkid: 5514 } }), geometryType: "esriGeometryPoint",
-      inSR: 5514, spatialRel: "esriSpatialRelIntersects" })).features || [];
-    if (!f.length) return radek("Radon", "seda", "Mapa radonu pro tento bod nemá údaj.");
-    const a = f[0].attributes, idx = a.radon_idx;
+    let a;
+    try {
+      // Kratší limit (4 s), ať při výpadku ČGS zbude čas na zálohu na našem serveru.
+      const f = (await ochVolej(`${OCH.RADON}/1/query`, { where: "1=1", outFields: "radon_idx,radon_popis", returnGeometry: false,
+        geometry: JSON.stringify({ x: stred[0], y: stred[1], spatialReference: { wkid: 5514 } }), geometryType: "esriGeometryPoint",
+        inSR: 5514, spatialRel: "esriSpatialRelIntersects" }, 4000)).features || [];
+      if (!f.length) return radek("Radon", "seda", "Mapa radonu pro tento bod nemá údaj.");
+      a = f[0].attributes;
+    } catch (e) {
+      // Výpadek ČGS (28. 11. 2026 celý mapy.geology.cz): místní kopie mapy na našem serveru (nastroje/radon_zaloha.py).
+      const api = window.OBJEDNAVKY?.api;
+      if (!api || api.startsWith("/")) throw e;
+      const ctrl = new AbortController(); const t = setTimeout(() => ctrl.abort(), Math.max(800, OCH_KONEC - performance.now()));
+      try {
+        const r = await fetch(`${api}/radon?x=${stred[0].toFixed(1)}&y=${stred[1].toFixed(1)}`, { signal: ctrl.signal });
+        if (!r.ok) throw e;
+        a = await r.json();
+      } finally { clearTimeout(t); }
+      if (a.radon_idx == null) return radek("Radon", "seda", "Mapa radonu pro tento bod nemá údaj.");
+    }
+    const idx = a.radon_idx;
     const b = ochRadonBarva(idx, rodinny);
     return radek("Radon", b, `Radonový index podloží ${a.radon_popis || idx} (${idx} ze 3)` +
       (b === "oranzova" ? "; doporučujeme radon v domě změřit." : "; o domě rozhodne měření."));
@@ -324,8 +340,9 @@ function ochutnavkaOblasti(dum, rodinny = true, oblast = "praha", obec = "") {
   const PORADI = { cervena: 0, oranzova: 1, seda: 2, zelena: 3, info: 4 };
   const povodneRadon = Promise.allSettled([pov, radon]).then(([pv, rd]) => {
     const casti = [pv.status === "fulfilled" ? pv.value : { barva: "seda", text: "Mapa záplav teď neodpověděla; ověříme v Prověrce." },
-      rd.status === "fulfilled" ? rd.value : { barva: "seda", text: "Mapa radonu teď neodpověděla." }];
-    const barva = casti.map((c) => c.barva).sort((a, b) => PORADI[a] - PORADI[b])[0];
+      rd.status === "fulfilled" ? rd.value : { barva: "seda", text: "Mapa radonu teď neodpověděla; ověříme v Prověrce." }];
+    // Nezjištěný radon (výpadek mapy, bod bez údaje) nezešedí celý řádek: barvu dají povodně (Petr 28. 11. 2026).
+    const barva = (casti.filter((c) => c.barva !== "seda").map((c) => c.barva).sort((a, b) => PORADI[a] - PORADI[b])[0]) || "seda";
     return radek("Povodně a radon", barva, `Povodně: ${casti[0].text.replace(/^./, (c) => c.toLowerCase())} Radon: ${casti[1].text.replace(/^Radonový index/, "index").replace(/^./, (c) => c.toLowerCase())}`);
   });
   return { "Povodně a radon": povodneRadon, "Hluk": hl, "Územní plán": pl, "Rizika v okolí": ok, "Vybavenost": vybavenost, "Plánované stavby": st };
