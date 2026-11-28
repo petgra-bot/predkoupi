@@ -286,11 +286,12 @@ async function najdiBudovuZInzeratu(inz) {
   }
   // 3) Kandidáti: okolí bodu na mapě, nebo celá ulice, když inzerát uvádí jen ulici.
   let adresy = [];
+  let priblizne = false;   // bod z inzerátu na žádném domě neleží – sám vybrat jen se silným důvodem (výměra pozemku)
   const presnyBod = inz.lat && inz.lon && inz.presnost !== "ulice";
   if (presnyBod) {
     // iDNES u části inzerátů posouvá bod o 60–150 m (audit 28. 11. 2026: Mělník, Žermanice) – pak hledat do 250 m a nabídnout mapu.
     let okoli = await adresyUBodu(inz.lat, inz.lon, 60);
-    if (!okoli.length) okoli = await adresyUBodu(inz.lat, inz.lon, 250);
+    if (!okoli.length) { okoli = await adresyUBodu(inz.lat, inz.lon, 250); priblizne = true; }
     adresy = okoli.filter((a) => naUlici(a.adresa, inz.ulice));
     if (!adresy.length) adresy = okoli;
   } else if (inz.ulice) {
@@ -306,7 +307,7 @@ async function najdiBudovuZInzeratu(inz) {
   const [prvni, druhy] = poradi;
   const nadDruhym = prvni.skore - (druhy ? druhy.skore : -99);
   const silny = prvni.duvody.length > 0;
-  if (prvni.skore > 0 && nadDruhym >= 2 && (silny || poradi.length === 1)) {
+  if (prvni.skore > 0 && nadDruhym >= 2 && (silny || (poradi.length === 1 && !priblizne)) && !(priblizne && !silny)) {
     const jistota = prvni.duvody.length >= 2 || (prvni.duvody[0]?.startsWith("bod") && nadDruhym >= 3) ? "vysoká" : "střední";
     return { adresa: prvni, jistota, alternativy: jistota === "vysoká" ? [] : poradi.slice(1, 5).filter((x) => x.skore > 0),
       jak: prvni.duvody.length ? prvni.duvody.join("; ") : "jediná budova odpovídající typem" };
@@ -515,7 +516,7 @@ async function zpracujInzerat(inz, i_ve_vystavbe = false) {
   // Stav „ve výstavbě“ z inzerátu (audit 28. 11. 2026: Žermanice, Uhříněves): nedokončená stavba v katastru zatím není.
   if (!i_ve_vystavbe && /výstavb/i.test(inz.stav || "")) {
     $("vysledek").innerHTML = karta("upresnit", "Stavba je podle inzerátu ve výstavbě",
-      `<p>Nedokončený ${inz.typ === "byt" ? "dům ani byty v&nbsp;něm" : "dům"} v&nbsp;katastru zatím nejsou, takže je prověřit neumíme. Zkuste to prosím po kolaudaci.</p>
+      `<p>${inz.typ === "byt" ? "Nedokončený dům ani byty v&nbsp;něm v&nbsp;katastru zatím nejsou, takže je" : "Nedokončený dům v&nbsp;katastru zatím není, takže ho"} prověřit neumíme. Zkuste to prosím po kolaudaci.</p>
       <p><button type="button" class="odkaz" id="presto-mapa">Přesto vybrat dům na mapě</button></p>`);
     $("presto-mapa").addEventListener("click", () => zpracujInzerat(inz, true).catch(chyba));
     return;
