@@ -168,7 +168,24 @@ function ochutnavkaOkoli(dum, rodinny, obec) {
   })();
   const hluk = (async () => {
     const [lden, ln] = await Promise.all([ochHlukMzd(dum, "Ldvn"), ochHlukMzd(dum, "Ln")]);
-    if (!lden && !ln) return radek("Hluk", "zelena", "Mimo hlavní silnice, železnice a letiště, pro které hlukové mapy existují; místní provoz ověřte při prohlídce.");
+    if (!lden && !ln) {
+      // Bez hlukové mapy rozhoduje vzdálenost ze ZABAGED (stejně jako report, Petr 28. 11. 2026): „Ověřit“ u dálnice
+      // do 300 m, silnice I. třídy do 50 m a trati do 60 m – mapa slabší silnice a tratě nepokrývá.
+      const [silnice, trate] = await Promise.all([
+        ochPrvky(`${OCH.ZABAGED}/79`, dum, { vzdalenost: 300, pole: "typsil_k,silnice", geometrie: true,
+          where: "typsil_k LIKE 'D%' OR typsil_k LIKE 'M%' OR typsil_k LIKE 'S1%'" }).catch(() => []),
+        ochPrvky(`${OCH.ZABAGED}/75`, dum, { vzdalenost: 60, pole: "OBJECTID", geometrie: true }).catch(() => [])]);
+      const blizke = silnice.filter((f) => f.geometry).map((f) => {
+        const typ = String(f.attributes.typsil_k || ""), d = Math.round(ochVzdalenost(dum, f.geometry));
+        const nazev = typ.startsWith("S1") ? "silnice I. třídy" : typ.startsWith("D") ? "dálnice" : "silnice pro motorová vozidla";
+        const cislo = (String(f.attributes.silnice || "").match(/\d+/) || [""])[0];
+        return { d, popis: `${nazev}${cislo ? " " + cislo : ""}`, limit: typ.startsWith("S1") ? 50 : 300 };
+      }).filter((x) => x.d <= x.limit).sort((a, b) => a.d - b.d);
+      const trat = trate.filter((f) => f.geometry).map((f) => Math.round(ochVzdalenost(dum, f.geometry))).sort((a, b) => a - b)[0];
+      const duvody = [...(blizke[0] ? [`${blizke[0].popis} ${blizke[0].d} m`] : []), ...(trat != null ? [`železniční trať ${trat} m`] : [])];
+      if (duvody.length) return radek("Hluk", "oranzova", `Hluková mapa tu není (mapují se jen nejvytíženější silnice a tratě), ale blízko domu je ${duvody.join(" a ")} – hluk tam bývá nad doporučením WHO; ověřte při prohlídce.`);
+      return radek("Hluk", "zelena", "Mimo hlavní silnice, železnice a letiště, pro které hlukové mapy existují; místní provoz ověřte při prohlídce.");
+    }
     const b = ochBarvaHluku(lden, ln);
     return radek("Hluk", b, `U nejhlučnější fasády celodenní průměr ${ochPasmo(lden)}, v noci ${ochPasmo(ln)}` + (b !== "zelena" ? " – nad doporučením WHO." : "."));
   })();
