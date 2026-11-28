@@ -288,7 +288,9 @@ async function najdiBudovuZInzeratu(inz) {
   let adresy = [];
   const presnyBod = inz.lat && inz.lon && inz.presnost !== "ulice";
   if (presnyBod) {
-    const okoli = await adresyUBodu(inz.lat, inz.lon, 60);
+    // iDNES u části inzerátů posouvá bod o 60–150 m (audit 28. 11. 2026: Mělník, Žermanice) – pak hledat do 250 m a nabídnout mapu.
+    let okoli = await adresyUBodu(inz.lat, inz.lon, 60);
+    if (!okoli.length) okoli = await adresyUBodu(inz.lat, inz.lon, 250);
     adresy = okoli.filter((a) => naUlici(a.adresa, inz.ulice));
     if (!adresy.length) adresy = okoli;
   } else if (inz.ulice) {
@@ -509,7 +511,15 @@ function lokalitaZOdkazu(u) {
   return null;
 }
 
-async function zpracujInzerat(inz) {
+async function zpracujInzerat(inz, i_ve_vystavbe = false) {
+  // Stav „ve výstavbě“ z inzerátu (audit 28. 11. 2026: Žermanice, Uhříněves): nedokončená stavba v katastru zatím není.
+  if (!i_ve_vystavbe && /výstavb/i.test(inz.stav || "")) {
+    $("vysledek").innerHTML = karta("upresnit", "Stavba je podle inzerátu ve výstavbě",
+      `<p>Nedokončený ${inz.typ === "byt" ? "dům ani byty v&nbsp;něm" : "dům"} v&nbsp;katastru zatím nejsou, takže je prověřit neumíme. Zkuste to prosím po kolaudaci.</p>
+      <p><button type="button" class="odkaz" id="presto-mapa">Přesto vybrat dům na mapě</button></p>`);
+    $("presto-mapa").addEventListener("click", () => zpracujInzerat(inz, true).catch(chyba));
+    return;
+  }
   nacitam("Hledám dům v registru adres a katastru…");
   const v = await najdiBudovuZInzeratu(inz);
   if (v.adresa) return zobrazBudovu(v.adresa, inz, v);

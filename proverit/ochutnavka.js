@@ -311,12 +311,12 @@ function ochutnavkaOblasti(dum, rodinny = true, oblast = "praha", obec = "") {
     const doprava = ["metro", "vlak", "tramvaj", "autobus"].filter((n) => (nej[n] ?? 1e9) <= 1000).map((n) => `${n} ${zaokr(nej[n])}`);
     const zastavka = Math.min(...["metro", "vlak", "tramvaj", "autobus"].map((n) => nej[n] ?? 1e9));
     const text = `${zakl} · doprava: ${doprava.length ? doprava.join(", ") : `nejbližší zastávka ${zastavka < 1e9 ? zaokr(zastavka) : "v mapě do 3 km není"}`}`;
-    // Barva (Petr 21. 11. 2026, Zvánovice): pozor, když je daleko obchod nebo zastávka (nad 1,5 km), nebo když jsou
-    // aspoň 3 z 5 základních míst (potraviny, škola, školka, lékárna, zastávka) dál než 1 km. Riziko nikdy – je to
-    // vlastnost místa, kterou kupující volí, ne vada nemovitosti.
-    const daleko = [nej["potraviny"], nej["škola"], nej["školka"], nej["lékárna"], zastavka].filter((d) => (d ?? 1e9) > 1000).length;
-    const pozor = (nej["potraviny"] ?? 1e9) > 1500 || zastavka > 1500 || daleko >= 3;
-    return radek("Vybavenost", pozor ? "oranzova" : "zelena", `Nejblíž vzdušnou čarou: ${text}.` + (pozor ? " Na běžné nákupy a do školy budete nejspíš jezdit autem." : ""));
+    // Barva (Petr 21. 11. 2026, Zvánovice; 28. 11. 2026 bez školy a školky – OpenStreetMap jich v ČR třetinu nezná):
+    // ověřit, když je obchod nebo zastávka dál než 1,5 km, nebo když jsou aspoň 2 ze 3 míst (potraviny, lékárna,
+    // zastávka) dál než 1 km. Riziko nikdy – je to vlastnost místa, kterou kupující volí, ne vada nemovitosti.
+    const daleko = [nej["potraviny"], nej["lékárna"], zastavka].filter((d) => (d ?? 1e9) > 1000).length;
+    const pozor = (nej["potraviny"] ?? 1e9) > 1500 || zastavka > 1500 || daleko >= 2;
+    return radek("Vybavenost", pozor ? "oranzova" : "zelena", `Nejblíž vzdušnou čarou: ${text}.` + (pozor ? " Na běžné nákupy budete nejspíš jezdit autem." : ""));
   })();
   let { povodne: pov, hluk: hl, plan: pl, okoli: ok, stavby: st } = oblast === "okoli" ? ochutnavkaOkoli(dum, rodinny, obec)
     : { povodne, hluk, plan, okoli, stavby };
