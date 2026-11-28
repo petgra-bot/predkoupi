@@ -47,7 +47,7 @@
             <button type="button" class="obj-rozbal-tl" aria-expanded="false" aria-controls="obj-obsah-${v}">Co přesně dostanu</button>
             <span class="obj-rozbal" id="obj-obsah-${v}" hidden><ul>${OBSAH[v].map((x) => `<li>${x}</li>`).join("")}</ul></span></span></label>`;
 
-  window.objednavkaFormular = (kontejner, { adresa, typ, inz }) => {
+  window.objednavkaFormular = (kontejner, { adresa, typ, inz, budova }) => {
     const N = window.OBJEDNAVKY;
     const byt = typ === "bytový dům";
     const p = (v) => (v == null ? "" : esc(v));
@@ -109,7 +109,8 @@
     // Byt po krocích (Petr 15. 11. 2026): číslo bytu; „Číslo nevím“ rozbalí příjmení majitele, patro a souhlas s prověrkou
     // bez konkrétního bytu. Plocha je vidět v PLUS (odhad ceny) a při „Číslo nevím“ (hledání podle plochy).
     const nevimTl = f.querySelector(".obj-nevim-tl"), nevim = f.querySelector(".obj-nevim"), plochaBytu = f.querySelector(".obj-plocha");
-    const nevimOtevreno = () => nevim && !nevim.hidden;
+    let bezJednotek = false;   // dům nemá v katastru vymezené byty (to-do 42) – číslo bytu neexistuje
+    const nevimOtevreno = () => !bezJednotek && nevim && !nevim.hidden;
     const ukazPlochu = () => { if (plochaBytu) plochaBytu.hidden = !(balicek() === "plus" || nevimOtevreno()); };
     nevimTl?.addEventListener("click", () => {
       nevim.hidden = !nevim.hidden;
@@ -164,18 +165,42 @@
     const pocetText = (n) => n === 1 ? "Doplňte prosím 1 údaj – je označený červeně." : `Doplňte prosím ${n} údaje – jsou označené červeně.`;
     const prepocti = () => { const n = f.querySelectorAll(".obj-chybne").length; souhrn.textContent = n ? pocetText(n) : ""; };
     f.addEventListener("input", (e) => { if (e.target.name && e.target.name !== "balicek") { vycisti(e.target); prepocti(); } });
-    f.addEventListener("change", (e) => { if (["stav", "souhlas", "bez_bytu"].includes(e.target.name)) { vycisti(e.target); prepocti(); } });
+    f.addEventListener("change", (e) => { if (["stav", "souhlas", "bez_bytu", "bez_jednotek"].includes(e.target.name)) { vycisti(e.target); prepocti(); } });
+
+    // To-do 42 (Petr 27. 11. 2026, test Kladno): má bytový dům v katastru vymezené byty? Zdarma ještě před platbou.
+    // Bez bytů jde o obecní nebo družstevní dům – byt tu do vlastnictví koupit nejde; objednávka jen s potvrzením.
+    if (byt && budova?.castobce && budova?.cislo && N.api && !N.predvedeni) {
+      const ctrl = new AbortController(); setTimeout(() => ctrl.abort(), 12000);
+      fetch(`${N.api}/dum/jednotky?castobce=${encodeURIComponent(budova.castobce)}&cislo=${encodeURIComponent(budova.cislo)}&typ=${budova.typ === 2 ? 2 : 1}`, { signal: ctrl.signal })
+        .then((r) => r.ok ? r.json() : null).then((d) => {
+          if (d?.stav !== "bez_bytu") return;
+          bezJednotek = true;
+          window.mer?.("bez_jednotek");
+          const blok = f.querySelector(".obj-byt");
+          [f.cislo_bytu.closest("label"), blok.querySelector(".obj-cislo-tip"), nevimTl, nevim].forEach((x) => { if (x) x.hidden = true; });
+          blok.insertAdjacentHTML("afterbegin", `<div class="obj-bez-jednotek" role="alert">
+            <p><b>Byt v&nbsp;tomto domě nejde koupit jako samostatnou nemovitost.</b> Podle katastru dům nemá vymezené byty (jednotky) –
+            celý patří jednomu vlastníkovi, obvykle obci nebo družstvu. Kupuje se tu nejspíš družstevní podíl, nebo jde o&nbsp;nájem.</p>
+            <p>Prověrka posoudí dům, zápisy v&nbsp;katastru k&nbsp;domu a&nbsp;okolí – ne konkrétní byt ani prodávajícího.</p>
+            <label class="obj-souhlas"><input type="checkbox" name="bez_jednotek"><span>Rozumím a&nbsp;chci přesto prověřit dům.</span></label></div>`);
+          f.querySelectorAll(".obj-chybne").forEach((k) => vycisti(k.querySelector("input"))); prepocti();
+        }).catch(() => { /* bez odpovědi objednávka běží jako dřív */ });
+    }
 
     const kontrola = () => {
       const ch = [];
       const v = (x) => Number(String(x).replace(",", "."));
       if (byt) {
         const pl = v(f.plocha.value), cb = f.cislo_bytu.value.trim().replace(/\s+/g, "");
+        if (bezJednotek) {
+          if (!f.bez_jednotek.checked) ch.push([f.bez_jednotek, "Potvrďte, že rozumíte: byt v tomto domě nejde koupit samostatně a prověříme dům."]);
+        } else {
         if (cb && !/^\d{1,5}\/\d{1,4}$/.test(cb)) ch.push([f.cislo_bytu, "Číslo bytu má tvar 1311/146 (číslo domu, lomítko, číslo bytu)."]);
         if (!cb && !nevimOtevreno()) ch.push([f.cislo_bytu, "Doplňte číslo bytu, nebo klikněte na „Číslo nevím“."]);
         if (!cb && nevimOtevreno()) {
           if (!f.prijmeni.value.trim() && !(pl > 0)) ch.push([f.prijmeni, "Doplňte příjmení majitele, nebo plochu bytu – podle nich byt najdeme."]);
           if (!f.bez_bytu.checked) ch.push([f.bez_bytu, "Potvrďte, že rozumíte: bez určeného bytu nebude ve zprávě výpis bytu ani prověření vlastníka."]);
+        }
         }
         if ((balicek() === "plus" || nevimOtevreno()) && f.plocha.value && (pl < 10 || pl > 500)) ch.push([f.plocha, "Plocha bytu má být 10–500 m²."]);
         if (balicek() === "plus" && !(pl > 0)) ch.push([f.plocha, "Doplňte plochu bytu – bez ní cenu neodhadneme."]);
@@ -215,9 +240,10 @@
         inzerat: inz?.url || null,
         plocha: byt ? (balicek() === "plus" || nevimOtevreno() ? Number(String(f.plocha.value).replace(",", ".")) || null : null)
           : (balicek() === "plus" ? Number(f.plocha_dum?.value) || null : null),
-        cislo_bytu: byt ? f.cislo_bytu.value.trim().replace(/\s+/g, "") || null : null,
+        cislo_bytu: byt && !bezJednotek ? f.cislo_bytu.value.trim().replace(/\s+/g, "") || null : null,
         prijmeni: byt && nevimOtevreno() && !f.cislo_bytu.value.trim() ? f.prijmeni.value.trim() || null : null,
-        bez_bytu: byt && nevimOtevreno() && f.bez_bytu.checked,
+        bez_bytu: byt && (bezJednotek || (nevimOtevreno() && f.bez_bytu.checked)),
+        bez_jednotek: byt && bezJednotek,
         cena: balicek() === "plus" ? cislo(f.cena.value) || null : null,
         patro: byt && nevimOtevreno() ? f.patro.value.trim() || null : null,
         stav: balicek() === "plus" ? f.stav.value : null,

@@ -481,7 +481,8 @@ async function zobrazBudovu(adresa, inz, puvod) {
   if ($("ochutnavka")) ochutnavka(adresa.so, $("ochutnavka"), { start: puvod.start, obrys: b.obrys, rodinny: !byt, adresa: adresa.text || adresa.adresa || "",
     oblast: vOkoli ? "okoli" : "praha", obec: vOkoli ? obec : "" });
   $("vysledek").querySelector("[data-znovu]")?.addEventListener("click", () => { const v = $("vstup"); v.value = ""; v.focus(); v.scrollIntoView({ block: "center" }); });
-  if ($("objednat")) window.objednavkaFormular($("objednat"), { adresa: adresa.adresa, typ, inz });
+  if ($("objednat")) window.objednavkaFormular($("objednat"), { adresa: adresa.adresa, typ, inz,
+    budova: { castobce: b.castobce, cislo: parseInt(String(b.cisladomovni || "").split(",")[0], 10) || null, typ: b.typstavebnihoobjektukod } });
   plovouciObjednat();
   document.querySelectorAll("#vysledek [data-zajem]").forEach((k) => window.zajemFormular?.(k));
   $("vysledek").querySelectorAll("button[data-alt]").forEach((btn) => btn.addEventListener("click", () =>

@@ -161,6 +161,9 @@ ul.kandidati button .tlumene { color: var(--slabe-t); }
   text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
 .obj-nevim-tl { font-size: .92rem; margin: 0 0 8px; }
 .obj-nevim { border-left: 3px solid var(--linka); padding: 4px 0 2px 14px; margin: 0 0 10px; }
+.obj-bez-jednotek { background: #fdecea; border: 1px solid #e08070; padding: 12px 14px; margin: 0 0 12px; color: var(--navy); }
+.obj-bez-jednotek p { margin: 0 0 8px; font-size: .92rem; }
+.obj-bez-jednotek .obj-souhlas { margin: 4px 0 0; }
 .obj-nevim .obj-souhlas { margin-bottom: 6px; }
 .obj-email { margin: 14px 0 12px; }
 .obj-souhlas { display: flex !important; gap: 10px; align-items: flex-start; font-weight: 500 !important; line-height: 1.5; margin: 0 0 14px; }
