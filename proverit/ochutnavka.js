@@ -418,6 +418,7 @@ async function ochutnavka(soKod, cil, { start = performance.now(), obrys: znamy,
     const pocty = ["cervena", "oranzova", "zelena", "seda"].map((k) => [k, vsechny.filter((x) => x.barva === k).length]).filter(([, n]) => n);
     cil.querySelector(".shrnuti").textContent = pocty.map(([k, n]) => `${n}×\u00a0${OCH_STAV[k].toLowerCase().replace(" ", "\u00a0")}`).join(" · ");
     ochEmail(cil, vsechny, adresa);
+    ochZpetna(cil, vsechny, adresa);
     cil.dispatchEvent(new CustomEvent("ochutnavka-hotovo", { detail: { oblasti: vsechny, ms: Math.round(performance.now() - start) }, bubbles: true }));
   } catch (e) {
     cil.innerHTML = `<p class="poznamka">Přehled se teď nepodařilo načíst (${esc(e.message)}). Zkuste to prosím za chvíli znovu.</p>`;
@@ -426,6 +427,46 @@ async function ochutnavka(soKod, cil, { start = performance.now(), obrys: znamy,
   }
 }
 
+
+// ---------- zpětná vazba k přehledu (Petr 28. 11. 2026: známí testují web mimo Prahu) ----------
+// Text jde e-mailem provozovateli spolu s adresou a řádky přehledu; nic se neukládá. E-mail pro odpověď je nepovinný.
+function ochZpetna(cil, oblasti, adresa) {
+  const api = window.OBJEDNAVKY?.api;
+  if (!api || api.startsWith("/") || cil.querySelector(".och-zpetna")) return;
+  cil.querySelector(".ochutnavka").insertAdjacentHTML("beforeend", `
+    <details class="och-zpetna">
+      <summary>Nesedí vám něco v přehledu? Napište nám</summary>
+      <form novalidate>
+        <label for="och-zpetna-text">Co nesedí nebo co by se hodilo</label>
+        <textarea id="och-zpetna-text" name="text" rows="3" maxlength="1500" placeholder="Např. špatně určený dům, chybějící obchod, nesrozumitelný text…"></textarea>
+        <label for="och-zpetna-email">E-mail pro odpověď <span>(nepovinné)</span></label>
+        <div class="och-email-radek"><input id="och-zpetna-email" name="email" type="email" autocomplete="email" inputmode="email" placeholder="vas@email.cz">
+          <button type="submit">Odeslat</button></div>
+        <input type="text" name="web" tabindex="-1" autocomplete="off" class="skryte" aria-hidden="true">
+        <p class="och-email-stav" role="status"></p>
+      </form>
+    </details>`);
+  const f = cil.querySelector(".och-zpetna form"), stav = f.querySelector(".och-email-stav");
+  f.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const text = f.text.value.trim(), email = f.email.value.trim();
+    if (text.length < 3) { stav.textContent = "Napište prosím, co nesedí."; return; }
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) { stav.textContent = "E-mail má tvar jmeno@example.cz (nebo ho nechte prázdný)."; return; }
+    const tl = f.querySelector("button"); tl.disabled = true; stav.textContent = "Posíláme…";
+    try {
+      const r = await fetch(`${api}/zpetna-vazba`, { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text, email: email || null, adresa, web: f.web.value || null,
+          oblasti: oblasti.map(({ oblast, barva, text }) => ({ oblast, barva, text })) }) });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(typeof d.detail === "string" ? d.detail : "Zprávu se nepodařilo odeslat, napište prosím na info@predkoupi.cz.");
+      stav.textContent = "Děkujeme, zpráva odešla." + (email ? " Odpovíme na váš e-mail." : "");
+      f.text.value = ""; tl.disabled = false;
+      window.mer?.("zpetna_vazba");
+    } catch (err) {
+      stav.textContent = err.message; tl.disabled = false;
+    }
+  });
+}
 
 // ---------- přehled e-mailem (Petr 21. 11. 2026) ----------
 // Bez AI: server vloží hotové řádky přehledu do e-mailu. Souhlas s tipy je zvlášť a nezaškrtnutý; bez něj se e-mail neukládá.

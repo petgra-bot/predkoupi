@@ -293,5 +293,11 @@ button.odkaz { font: inherit; color: inherit; background: none; border: 0; paddi
 .och-email-radek button:disabled { opacity: .6; cursor: default; }
 .och-email-tipy { display: flex; gap: 8px; align-items: flex-start; margin-top: 10px; font-size: .85rem; color: var(--slabe-t); cursor: pointer; }
 .och-email-tipy input { margin-top: 3px; width: 18px; height: 18px; flex: none; }
+.och-zpetna { margin-top: 14px; font-size: .9rem; }
+.och-zpetna summary { cursor: pointer; color: var(--slabe-t); text-decoration: underline; text-underline-offset: 3px; min-height: 32px; }
+.och-zpetna form { margin-top: 10px; display: grid; gap: 8px; }
+.och-zpetna label { font-weight: 600; }
+.och-zpetna label span { font-weight: 400; color: var(--slabe-t); }
+.och-zpetna textarea { width: 100%; padding: 10px 12px; font: 16px "Montserrat", sans-serif; border: 1px solid rgba(255,255,255,.4); background: transparent; color: var(--text-t); resize: vertical; }
 .och-email-stav:empty { display: none; }
 .och-email-stav { margin: 10px 0 0; font-size: .9rem; }
