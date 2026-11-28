@@ -325,17 +325,17 @@ h2.h3 { font-size: 0.9375rem; font-weight: 700; letter-spacing: .02em; line-heig
 .cena.zdarma { border-top: 4px solid var(--navy); }
 
 /* Pozadí úvodu: prostorový model skutečného pražského bloku (budovy a počty podlaží z RÚIAN, ČÚZK) s označeným
-   prověřovaným domem – Petr 27. 11. 2026 vybral variantu 2c (to-do 11). Počítač: vpravo, slábne doleva k textu.
+   prověřovaným domem – Petr 27. 11. 2026 vybral variantu 2c (to-do 11); 28. 11. jemnější, domy až k okraji, na mobilu kratší. Počítač: vpravo, slábne doleva k textu.
    Mobil a tablet: pod polem na adresu, aby značka domu nebyla schovaná za nadpisem. */
 .uvod { position: relative; overflow: hidden; }
 .uvod > .obal { position: relative; z-index: 1; }
-.uvod::before { content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .6;
+.uvod::before { content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .5;
   background: url(/obrazky/uvod-model.svg) 100% 45% / auto 125% no-repeat;
   -webkit-mask-image: linear-gradient(90deg, transparent 38%, rgba(0,0,0,.6) 55%, #000 75%);
           mask-image: linear-gradient(90deg, transparent 38%, rgba(0,0,0,.6) 55%, #000 75%); }
 @media (max-width: 900px) {
-  .uvod { padding-bottom: 230px; }
-  .uvod::before { top: auto; height: 300px; opacity: .6; background: url(/obrazky/uvod-model.svg) 70% 35% / auto 520px no-repeat;
+  .uvod { padding-bottom: 150px; }
+  .uvod::before { top: auto; height: 220px; opacity: .5; background: url(/obrazky/uvod-model.svg) 70% 30% / auto 440px no-repeat;
     -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 30%);
             mask-image: linear-gradient(180deg, transparent 0%, #000 30%); } }
 @media (prefers-reduced-data: reduce) { .uvod::before { display: none; } .uvod { padding-bottom: clamp(44px, 6vw, 76px); } }
