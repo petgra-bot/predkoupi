@@ -39,6 +39,8 @@
       const zdroj =
         q.has("gclid") || q.has("gbraid") || q.has("wbraid") || (placene && utm.includes("google")) ? "reklama_google"
         : q.has("sznclid") || (placene && /seznam|sklik/.test(utm)) ? "reklama_sklik"
+        // Reklama Meta (to-do 44): v odkazu reklamy utm_source=facebook&utm_medium=paid; fbclid sám nestačí (mají ho i běžné příspěvky)
+        : placene && /facebook|instagram|meta|^fb|^ig/.test(utm) ? "reklama_facebook"
         : je(/(^|\.)(chatgpt\.com|openai\.com|perplexity\.ai|claude\.ai|copilot\.microsoft\.com|gemini\.google\.com)$/) ? "ai"
         : je(/^(mail\.google\.com|email\.seznam\.cz|outlook\.(live|office)\.com|.*\.mail\..*)$/) ? "email"
         : je(/(^|\.)google\.[a-z.]+$/) ? "google"
