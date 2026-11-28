@@ -1,4 +1,4 @@
-"""Mapka Středočeského kraje s okresy pro přehled zdarma a průběh (okolí Prahy, Petr 21. 11. 2026).
+"""Mapka Středočeského a Pardubického kraje s okresy pro přehled zdarma a průběh (Petr 21. 11. 2026, Pardubický 26. 11.).
 
 Stejný princip jako mapka Prahy v objednavka/praha.js: obrysy z RÚIAN (S-JTSK), zjednodušené, převedené do SVG
 cest v rámečku w × h. Výstup objednavka/kraj.js (window.KRAJ). Obnova jen při změně hranic: python3 test/kraj.py
@@ -11,8 +11,8 @@ from pathlib import Path
 RUIAN = "https://ags.cuzk.gov.cz/arcgis/rest/services/RUIAN/Prohlizeci_sluzba_nad_daty_RUIAN/MapServer"
 OKRESY = {3201: "Benešov", 3202: "Beroun", 3203: "Kladno", 3204: "Kolín", 3205: "Kutná Hora", 3206: "Mělník",
           3207: "Mladá Boleslav", 3208: "Nymburk", 3209: "Praha-východ", 3210: "Praha-západ", 3211: "Příbram",
-          3212: "Rakovník"}
-W = 200
+          3212: "Rakovník", 3603: "Chrudim", 3606: "Pardubice", 3609: "Svitavy", 3611: "Ústí nad Orlicí"}
+W = 260
 
 
 def dotaz(vrstva, where):
@@ -37,7 +37,7 @@ def main():
             "okresy": [{"n": OKRESY[f["attributes"]["kod"]], "d": cesta(f["geometry"]["rings"])} for f in okresy],
             "praha": cesta(praha[0]["geometry"]["rings"])}
     cil = Path(__file__).resolve().parent.parent / "objednavka" / "kraj.js"
-    cil.write_text("// Mapka Středočeského kraje s okresy (RÚIAN, generuje test/kraj.py)\nwindow.KRAJ = "
+    cil.write_text("// Mapka Středočeského a Pardubického kraje s okresy (RÚIAN, generuje test/kraj.py)\nwindow.KRAJ = "
                    + json.dumps(data, ensure_ascii=False, separators=(",", ":")) + ";\n")
     print(cil, f"{cil.stat().st_size // 1024} kB", len(data["okresy"]), "okresů", W, "×", h)
 
