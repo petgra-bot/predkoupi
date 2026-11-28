@@ -20,15 +20,15 @@ const OCH = {
 const OCH_HLUK_OKOLI = ["Silnice", "Zeleznice", "Letiste", "Aglomerace_Silnice", "Aglomerace_Zeleznice"];
 // Plánované záměry města (územně analytické podklady) – stejné vrstvy jako uzemni_plan.py; v prohlížeči jedním dotazem identify.
 const OCH_UAP_VRSTVY = "all:2,3,4,5,6,7,8,9,10,12,13,14,15,16,17,18,19,21,22,23,24,25,26,27,28,29,36,37";
-// Vybavenost z OpenStreetMap: předem stažené soubory na našem webu (test/vybavenost.py), každý se načte jednou za návštěvu.
-// Po krajích (Petr 26. 11. 2026), aby prohlížeč v Praze nestahoval data dalších krajů; obdélníky jako v test/vybavenost.py.
-const OCH_VYBAVENOST_SOUBORY = [
-  ["/proverit/vybavenost.json?v=3", [49.40, 50.66, 13.29, 15.61]],              // Praha a Středočeský kraj
-  ["/proverit/vybavenost-pardubicky.json?v=1", [49.47, 50.28, 15.30, 17.00]],   // Pardubický kraj
-];
+// Vybavenost z OpenStreetMap: předem stažené dlaždice na našem webu (test/vybavenost.py), každá se načte jednou za návštěvu.
+// Celá ČR po dlaždicích 0,2° × 0,3° (cca 22 × 22 km, 28. 11. 2026; dřív soubory po krajích): prohlížeč stáhne jen dlaždice
+// v okruhu 3 km od domu. Chybějící dlaždice (404) = žádná místa (les, hranice státu). Rozměr musí sedět s test/vybavenost.py.
+const OCH_DLAZDICE = [0.2, 0.3];
+const OCH_VYBAVENOST_VERZE = 2;
 const ochVybavenostSliby = {};
-const OCH_VYBAVENOST = (url) => (ochVybavenostSliby[url] ||= fetch(url).then((r) => {
-  if (!r.ok) { delete ochVybavenostSliby[url]; throw new Error(`vybavenost ${r.status}`); }
+const OCH_VYBAVENOST = (klic) => (ochVybavenostSliby[klic] ||= fetch(`/proverit/vybavenost/${klic}.json?v=${OCH_VYBAVENOST_VERZE}`).then((r) => {
+  if (r.status === 404) return {};
+  if (!r.ok) { delete ochVybavenostSliby[klic]; throw new Error(`vybavenost ${r.status}`); }
   return r.json();
 }));
 const OCH_STAV = { zelena: "V pořádku", oranzova: "Ověřit", cervena: "Riziko", seda: "Nezjištěno", info: "Informace" };
@@ -155,7 +155,7 @@ async function ochHlukMzd(dum, ukazatel) {
   return Math.max(0, ...r.filter(ochOk).map((x) => x.value || 0)) || null;
 }
 
-// Okolí Prahy: stejné řádky jako v Praze, ale z celostátních map; územní plán obce neověřujeme (Petr 21. 11. 2026).
+// Mimo Prahu (celá ČR od 28. 11. 2026): stejné řádky jako v Praze, ale z celostátních map; územní plán obce neověřujeme (Petr 21. 11. 2026).
 function ochutnavkaOkoli(dum, rodinny, obec) {
   const radek = (oblast, barva, text) => ({ oblast, barva, stav: OCH_STAV[barva], text });
   const povodne = (async () => {
@@ -173,7 +173,7 @@ function ochutnavkaOkoli(dum, rodinny, obec) {
     return radek("Hluk", b, `U nejhlučnější fasády celodenní průměr ${ochPasmo(lden)}, v noci ${ochPasmo(ln)}` + (b !== "zelena" ? " – nad doporučením WHO." : "."));
   })();
   const plan = Promise.resolve(radek("Územní plán", "seda",
-    `Územní plán obce${obec ? " " + obec : ""} neprověřujeme – podívejte se do platného plánu obce (web obce nebo mapový portál kraje).`));
+    `Územní plán obce${obec ? " " + obec : ""} v přehledu neprověřujeme – platný plán najdete na webu obce nebo v Národním geoportálu územního plánování.`));
   const okoli = (async () => {
     const [vedeni, arealy] = await Promise.all([ochPrvky(`${OCH.ZABAGED}/88`, dum, { vzdalenost: 300, pole: "napeti", geometrie: true }).catch(() => []),
       ochPrvky(`${OCH.ZABAGED}/114`, dum, { vzdalenost: 500, pole: "typzast_k", geometrie: true }).catch(() => [])]);
@@ -276,19 +276,18 @@ function ochutnavkaOblasti(dum, rodinny = true, oblast = "praha", obec = "") {
       `Plánované záměry do 300 m: ${seznam}${z.length > 3 ? ` a další ${z.length - 3}` : ""}. Posudky vlivu na okolí prověříme v Prověrce.`);
   })();
   const vybavenost = (async () => {
-    // Souřadnice domu ve WGS84 z RÚIAN (body OpenStreetMap jsou ve WGS84); soubor s body se načítá souběžně.
-    const hlavni = OCH_VYBAVENOST(OCH_VYBAVENOST_SOUBORY[0][0]);   // většina adres je v Praze – načítat hned souběžně
+    // Souřadnice domu ve WGS84 z RÚIAN (body OpenStreetMap jsou ve WGS84), pak dlaždice s body v okruhu cca 3 km.
     const [x, y] = stred;
     const b = await ochVolej(`${OCH.RUIAN}/3/query`, { geometry: JSON.stringify({ x, y, spatialReference: { wkid: 5514 } }), geometryType: "esriGeometryPoint",
       inSR: 5514, spatialRel: "esriSpatialRelIntersects", distance: 30, units: "esriSRUnit_Meter", outFields: "kod", returnGeometry: true, outSR: 4326 });
     const body = (b.features?.[0]?.geometry?.rings || []).flat();
     if (!body.length) throw new Error("souřadnice domu chybí");
     const lon = body.reduce((s, p) => s + p[0], 0) / body.length, lat = body.reduce((s, p) => s + p[1], 0) / body.length;
-    // Body z předem staženého souboru (OpenStreetMap, test/vybavenost.py): z prohlížeče byl Overpass pomalý a často
+    // Body z předem stažených dlaždic (OpenStreetMap, test/vybavenost.py): z prohlížeče byl Overpass pomalý a často
     // neodpověděl vůbec (Petr 21. 11. 2026). Nejbližší místa počítáme tady, žádný další dotaz.
-    // Soubory krajů, do jejichž obdélníku dům padne (u hranice i oba), sloučené do jednoho seznamu bodů.
-    const urls = OCH_VYBAVENOST_SOUBORY.filter(([, [j, sv, z, v]]) => lat >= j && lat <= sv && lon >= z && lon <= v).map(([u]) => u);
-    const casti = await Promise.all((urls.length ? urls : [OCH_VYBAVENOST_SOUBORY[0][0]]).map((u) => u === OCH_VYBAVENOST_SOUBORY[0][0] ? hlavni : OCH_VYBAVENOST(u)));
+    const [dLat, dLon] = OCH_DLAZDICE, klice = new Set();
+    for (const la of [lat - 0.03, lat + 0.03]) for (const lo of [lon - 0.045, lon + 0.045]) klice.add(`${Math.floor(la / dLat)}_${Math.floor(lo / dLon)}`);
+    const casti = await Promise.all([...klice].map(OCH_VYBAVENOST));
     const data = {};
     for (const c of casti) for (const [k, v] of Object.entries(c)) if (Array.isArray(v)) (data[k] ||= []).push(...v);
     const km = (la, lo) => { const k = Math.PI / 180, a = Math.sin((la - lat) * k / 2) ** 2 + Math.cos(lat * k) * Math.cos(la * k) * Math.sin((lo - lon) * k / 2) ** 2; return 12742000 * Math.asin(Math.sqrt(a)); };
@@ -305,18 +304,19 @@ function ochutnavkaOblasti(dum, rodinny = true, oblast = "praha", obec = "") {
     }
     const zaokr = (d) => d < 100 ? `${Math.max(10, Math.round(d / 10) * 10)} m` : d < 1000 ? `${Math.round(d / 50) * 50} m`
       : `${(Math.round(d / 100) / 10).toLocaleString("cs-CZ")} km`;
-    const vzd = (n) => n in nej ? zaokr(nej[n]) : "dál než 3 km";
+    // Bez místa do 3 km „v mapě do 3 km není“, ne „dál než 3 km“: OpenStreetMap v ČR chybí asi třetina školek (audit 28. 11. 2026).
+    const vzd = (n) => n in nej ? zaokr(nej[n]) : "v mapě do 3 km není";
     // Rozšířeno 21. 11. 2026 (recenze): lékárna, hřiště nebo park a druh dopravy (metro, vlak, tramvaj, autobus).
     const zakl = ["potraviny", "škola", "školka", "lékárna", "hřiště nebo park"].map((n) => `${n} ${vzd(n)}`).join(" · ");
     const doprava = ["metro", "vlak", "tramvaj", "autobus"].filter((n) => (nej[n] ?? 1e9) <= 1000).map((n) => `${n} ${zaokr(nej[n])}`);
     const zastavka = Math.min(...["metro", "vlak", "tramvaj", "autobus"].map((n) => nej[n] ?? 1e9));
-    const text = `${zakl} · doprava: ${doprava.length ? doprava.join(", ") : `nejbližší zastávka ${zastavka < 1e9 ? zaokr(zastavka) : "dál než 3 km"}`}`;
-    // Barva (Petr 21. 11. 2026, Zvánovice): pozor, když je daleko obchod nebo zastávka (nad 1,5 km), nebo když jsou
-    // aspoň 3 z 5 základních míst (potraviny, škola, školka, lékárna, zastávka) dál než 1 km. Riziko nikdy – je to
-    // vlastnost místa, kterou kupující volí, ne vada nemovitosti.
-    const daleko = [nej["potraviny"], nej["škola"], nej["školka"], nej["lékárna"], zastavka].filter((d) => (d ?? 1e9) > 1000).length;
-    const pozor = (nej["potraviny"] ?? 1e9) > 1500 || zastavka > 1500 || daleko >= 3;
-    return radek("Vybavenost", pozor ? "oranzova" : "zelena", `Nejblíž vzdušnou čarou: ${text}.` + (pozor ? " Na běžné nákupy a do školy budete nejspíš jezdit autem." : ""));
+    const text = `${zakl} · doprava: ${doprava.length ? doprava.join(", ") : `nejbližší zastávka ${zastavka < 1e9 ? zaokr(zastavka) : "v mapě do 3 km není"}`}`;
+    // Barva (Petr 21. 11. 2026, Zvánovice; 28. 11. 2026 bez školy a školky – OpenStreetMap jich v ČR třetinu nezná):
+    // ověřit, když je obchod nebo zastávka dál než 1,5 km, nebo když jsou aspoň 2 ze 3 míst (potraviny, lékárna,
+    // zastávka) dál než 1 km. Riziko nikdy – je to vlastnost místa, kterou kupující volí, ne vada nemovitosti.
+    const daleko = [nej["potraviny"], nej["lékárna"], zastavka].filter((d) => (d ?? 1e9) > 1000).length;
+    const pozor = (nej["potraviny"] ?? 1e9) > 1500 || zastavka > 1500 || daleko >= 2;
+    return radek("Vybavenost", pozor ? "oranzova" : "zelena", `Nejblíž vzdušnou čarou: ${text}.` + (pozor ? " Na běžné nákupy budete nejspíš jezdit autem." : ""));
   })();
   let { povodne: pov, hluk: hl, plan: pl, okoli: ok, stavby: st } = oblast === "okoli" ? ochutnavkaOkoli(dum, rodinny, obec)
     : { povodne, hluk, plan, okoli, stavby };

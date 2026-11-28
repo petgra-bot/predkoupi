@@ -63,22 +63,51 @@ function variantyAdresy(text) {
   return { varianty: [...new Set(v.filter(Boolean))], praha: !!m, cislo: m?.[1], casti };
 }
 
+// Leží adresa v obci nebo části obce, kterou uživatel napsal? Bez diakritiky; „Říčany u Prahy“ sedí na „…, 25101 Říčany“.
+function vZadaneObci(adresa, casti) {
+  const a = bezDiakritiky(adresa);
+  const obce = adresa.split(",").slice(1).map((x) => bezDiakritiky(x.replace(/^\s*\d{3}\s?\d{2}\s+/, "").trim())).filter((x) => x.length >= 3);
+  return casti.some((x) => { const c = bezDiakritiky(x); return a.includes(c) || obce.some((o) => c.includes(o)); });
+}
+
 // Postupně zkouší varianty; z výsledků nechá Prahu (pokud ji uživatel napsal) a podle části obce nebo čísla obvodu zúží.
+// Celá ČR (audit 28. 11. 2026): když uživatel napsal obec a geokodér vrátí jen adresy jinde („tř. Tomáše Bati 100, Zlín“ →
+// Otrokovice), zkusí další varianty a nakonec vrátí výsledek s příznakem mimoObec – web pak nic nevybere sám.
 async function geokodujChytre(text) {
   const { varianty, praha, cislo, casti } = variantyAdresy(text);
+  let mimo = null;
   for (const q of varianty) {
     let kand = (await geokoduj(q, 10)).filter((c) => c.attributes.Type === "AdresniMisto");
     if (praha) kand = kand.filter((c) => /Praha/.test(c.address));
     if (!kand.length) continue;
-    const podleCasti = kand.filter((c) => casti.some((x) => c.address.toLowerCase().includes(x.toLowerCase())));
-    if (podleCasti.length) kand = podleCasti;
-    else if (cislo && kand.length > 1) {
+    const podleCasti = kand.filter((c) => vZadaneObci(c.address, casti));
+    if (podleCasti.length) return podleCasti;
+    if (casti.length) { mimo ||= kand; continue; }
+    if (cislo && kand.length > 1) {
       const podleCisla = kand.filter((c) => new RegExp(`Praha ${cislo}$`).test(c.address));
       if (podleCisla.length) kand = podleCisla;
     }
     return kand;
   }
-  return [];
+  return mimo ? Object.assign(mimo, { mimoObec: true }) : [];
+}
+
+// Adresa v zadané obci neexistuje: nabídnout domy v téže ulici v té obci (nejbližší čísla), pak stejnou adresu jinde.
+async function nabidniMimoObec(text, jinde) {
+  const { casti } = variantyAdresy(text);
+  const zadano = text.split(",")[0].trim();
+  const ulice = zadano.replace(/\s+(č\.\s?ev\.\s*)?\d+[\d/a-z]*$/i, "").trim();
+  const cislo = parseInt(zadano.match(/(\d+)[\d/a-z]*$/i)?.[1] || "0", 10);
+  const obec = casti[casti.length - 1] || "";
+  const cisla = (a) => (a.adresa.split(",")[0].match(/\d+/g) || []).map(Number);
+  const vUlici = ulice && obec && ulice !== zadano ? (await adresyVUlici(ulice, obec).catch(() => []))
+    .sort((a, b) => Math.min(...cisla(a).map((n) => Math.abs(n - cislo))) - Math.min(...cisla(b).map((n) => Math.abs(n - cislo)))).slice(0, 6) : [];
+  const ostatni = (await Promise.all(jinde.slice(0, 4).map(async (c) => (await adresyUBodu(c.location.y, c.location.x, 1))[0]))).filter(Boolean);
+  const seznam = [...vUlici, ...ostatni];
+  seznam.forEach((a) => { a.vzdalenost = null; });
+  nabidni(seznam, `Tuto adresu v obci ${obec} jsme nenašli`,
+    `${esc(zadano)} v obci ${esc(obec)} v registru adres není.` + (vUlici.length ? ` Vyberte dům v ulici ${esc(ulice)} v obci ${esc(obec)}` : " Vyberte správnou adresu")
+    + (ostatni.length ? (vUlici.length ? ", nebo stejnou adresu v jiné obci (dole)." : " – stejné číslo jsme našli jen v jiných obcích.") : "."), null);
 }
 
 async function adresniMista(where) {
@@ -257,9 +286,12 @@ async function najdiBudovuZInzeratu(inz) {
   }
   // 3) Kandidáti: okolí bodu na mapě, nebo celá ulice, když inzerát uvádí jen ulici.
   let adresy = [];
+  let priblizne = false;   // bod z inzerátu na žádném domě neleží – sám vybrat jen se silným důvodem (výměra pozemku)
   const presnyBod = inz.lat && inz.lon && inz.presnost !== "ulice";
   if (presnyBod) {
-    const okoli = await adresyUBodu(inz.lat, inz.lon, 60);
+    // iDNES u části inzerátů posouvá bod o 60–150 m (audit 28. 11. 2026: Mělník, Žermanice) – pak hledat do 250 m a nabídnout mapu.
+    let okoli = await adresyUBodu(inz.lat, inz.lon, 60);
+    if (!okoli.length) { okoli = await adresyUBodu(inz.lat, inz.lon, 250); priblizne = true; }
     adresy = okoli.filter((a) => naUlici(a.adresa, inz.ulice));
     if (!adresy.length) adresy = okoli;
   } else if (inz.ulice) {
@@ -275,7 +307,7 @@ async function najdiBudovuZInzeratu(inz) {
   const [prvni, druhy] = poradi;
   const nadDruhym = prvni.skore - (druhy ? druhy.skore : -99);
   const silny = prvni.duvody.length > 0;
-  if (prvni.skore > 0 && nadDruhym >= 2 && (silny || poradi.length === 1)) {
+  if (prvni.skore > 0 && nadDruhym >= 2 && (silny || (poradi.length === 1 && !priblizne)) && !(priblizne && !silny)) {
     const jistota = prvni.duvody.length >= 2 || (prvni.duvody[0]?.startsWith("bod") && nadDruhym >= 3) ? "vysoká" : "střední";
     return { adresa: prvni, jistota, alternativy: jistota === "vysoká" ? [] : poradi.slice(1, 5).filter((x) => x.skore > 0),
       jak: prvni.duvody.length ? prvni.duvody.join("; ") : "jediná budova odpovídající typem" };
@@ -379,17 +411,14 @@ async function vyberNaMape(vsechny, kandidati, uvod, inz) {
     zobrazBudovu(vybranyDum, inz, { jak: "vybráno na mapě", jistota: "jistá" }).catch(chyba));
 }
 
-// Středočeský kraj (Petr 21. 11. 2026 okresy Praha-východ a Praha-západ, 25. 11. celý kraj) a Pardubický kraj (26. 11.): rozhoduje kód části obce budovy z RÚIAN, ne název
-// obce (názvy se v ČR opakují). Seznam z nemo/nastroje/data/obce_okoli_prahy.json.
-let okoliSlib = null;
-const OKOLI_PRAHY = () => (okoliSlib ||= fetch("/proverit/okoli-prahy.json?v=3").then((r) => r.json())
-  .then((d) => new Set(d.casti_obce)).catch(() => { okoliSlib = null; return new Set(); }));
+// Celá Česká republika (Petr 28. 11. 2026; dřív Praha, Středočeský a Pardubický kraj se seznamem částí obcí): každá budova
+// z RÚIAN je v oblasti služby. Mimo Prahu přehled z celostátních map (oblast „okoli“), v Praze z pražských.
 
 async function zobrazBudovu(adresa, inz, puvod) {
   nacitam("Načítám údaje o budově…");
-  const [b, okoli] = await Promise.all([budovy([adresa.so]).then((x) => x[adresa.so]), OKOLI_PRAHY()]);
+  const b = (await budovy([adresa.so]))[adresa.so];
   if (!b) throw new Error("K této adrese se v katastru nepodařilo načíst budovu");
-  const vOkoli = okoli.has(b.castobce);
+  const vOkoli = !/\bPraha\b/.test(adresa.adresa);
   const obec = (adresa.adresa.match(/\d{5}\s+(.+)$/)?.[1] || adresa.adresa.split(",").pop()).trim();
   const mcSlib = mestskaCast(b.momc).catch(() => null);   // nečekáme: doplní se do tabulky, až přijde
   const { typ, zpusob } = typBudovy(b);
@@ -427,7 +456,6 @@ async function zobrazBudovu(adresa, inz, puvod) {
        Jednotku dohledáme v katastru podle plochy a podlaží z inzerátu.</p>`
     : "";
   const tabulka = `<dl>${radky.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("")}</dl>`;
-  const vPraze = /Praha/.test(adresa.adresa) || vOkoli;   // Praha nebo okolí Prahy: přehled a objednávka
   const nadpis = typ === "jiná stavba" ? "Tento typ stavby zatím neprověřujeme" : "Nemovitost je identifikovaná";
   const jina = typ === "jiná stavba";
   // Údaje o budově sbalené pod jedním řádkem (adresa a typ); upozornění a „Není to on?“ zůstávají vidět.
@@ -444,18 +472,12 @@ async function zobrazBudovu(adresa, inz, puvod) {
       <p>Prověrku zatím děláme pro byty a rodinné domy. Pokud jste zadali adresu jiné budovy, zkuste to znovu; jinak nám napište a prověrku zkusíme připravit ručně.</p>
       <div class="akce"><button type="button" class="tl tmave-tl" data-znovu>Zadat jinou adresu</button>
       <a class="tl obrys-tmave" href="mailto:info@predkoupi.cz?subject=${encodeURIComponent("Prověrka: " + adresa.adresa)}">Napsat nám</a></div></div>`
-      : vPraze && window.OBJEDNAVKY?.zapnute ? `<div id="ochutnavka" class="karta och-karta"></div><div class="co-dal" id="objednat"></div>`
-      : vPraze ? `<div id="ochutnavka" class="karta och-karta"></div><div class="co-dal"><h3>Co dál</h3>
+      : window.OBJEDNAVKY?.zapnute ? `<div id="ochutnavka" class="karta och-karta"></div><div class="co-dal" id="objednat"></div>`
+      : `<div id="ochutnavka" class="karta och-karta"></div><div class="co-dal"><h3>Co dál</h3>
       <p>Objednávky Prověrky (790 Kč) a Prověrky PLUS (1 390 Kč) spouštíme v nejbližších týdnech.</p>
-      <div class="akce"><a class="tl tmave-tl" href="/#ceny">Co obsahuje Prověrka</a></div><div class="co-dal-zajem" data-zajem data-zdroj="proverit"></div></div>`
-      // Mimo Prahu (W11, 12. 11. 2026): měříme zájem – e-mail a obec, ať víme, kam službu rozšířit.
-      : `<div class="co-dal"><h3>Tady zatím neprověřujeme</h3>
-      <p>Prověrku děláme v Praze, ve Středočeském a v Pardubickém kraji. Podle zájmu přidáme další kraje.</p>
-      <div class="co-dal-zajem" data-zajem data-zdroj="${esc(("mimo:" + obec).slice(0, 40))}" data-stitek="E-mail pro oznámení, až budeme prověřovat i v obci ${esc(obec)}"
-        data-souhlas="Pošleme jedinou zprávu, až službu rozšíříme do vaší obce, a pak e-mail smažeme. Ukládáme jen e-mail a název obce."
-        data-hotovo="až budeme prověřovat i ve vaší obci"></div></div>`);
+      <div class="akce"><a class="tl tmave-tl" href="/#ceny">Co obsahuje Prověrka</a></div><div class="co-dal-zajem" data-zajem data-zdroj="proverit"></div></div>`);
   mcSlib.then((mc) => { const dd = [...$("vysledek").querySelectorAll("dt")].find((x) => x.textContent === "Městská část")?.nextElementSibling; if (dd) dd.textContent = mc || "–"; });
-  if (!jina) window.mer?.(vPraze ? "prehled" : "mimo_prahu");
+  if (!jina) window.mer?.("prehled");
   if ($("ochutnavka")) ochutnavka(adresa.so, $("ochutnavka"), { start: puvod.start, obrys: b.obrys, rodinny: !byt, adresa: adresa.text || adresa.adresa || "",
     oblast: vOkoli ? "okoli" : "praha", obec: vOkoli ? obec : "" });
   $("vysledek").querySelector("[data-znovu]")?.addEventListener("click", () => { const v = $("vstup"); v.value = ""; v.focus(); v.scrollIntoView({ block: "center" }); });
@@ -490,7 +512,15 @@ function lokalitaZOdkazu(u) {
   return null;
 }
 
-async function zpracujInzerat(inz) {
+async function zpracujInzerat(inz, i_ve_vystavbe = false) {
+  // Stav „ve výstavbě“ z inzerátu (audit 28. 11. 2026: Žermanice, Uhříněves): nedokončená stavba v katastru zatím není.
+  if (!i_ve_vystavbe && /výstavb/i.test(inz.stav || "")) {
+    $("vysledek").innerHTML = karta("upresnit", "Stavba je podle inzerátu ve výstavbě",
+      `<p>${inz.typ === "byt" ? "Nedokončený dům ani byty v&nbsp;něm v&nbsp;katastru zatím nejsou, takže je" : "Nedokončený dům v&nbsp;katastru zatím není, takže ho"} prověřit neumíme. Zkuste to prosím po kolaudaci.</p>
+      <p><button type="button" class="odkaz" id="presto-mapa">Přesto vybrat dům na mapě</button></p>`);
+    $("presto-mapa").addEventListener("click", () => zpracujInzerat(inz, true).catch(chyba));
+    return;
+  }
   nacitam("Hledám dům v registru adres a katastru…");
   const v = await najdiBudovuZInzeratu(inz);
   if (v.adresa) return zobrazBudovu(v.adresa, inz, v);
@@ -775,6 +805,8 @@ async function overit(e) {
       $("vysledek").innerHTML = karta("chyba", "Adresu se nepodařilo najít",
         `<p>V katastru jsme takovou adresu nenašli. Napište ji prosím jako na dopise – ulice, číslo domu a obec nebo část obce
         (např. Karlická 910/49, Radotín). Jednodušší je vložit odkaz na inzerát.</p>`);
+    } else if (adresy.mimoObec) {
+      await nabidniMimoObec(text, adresy);
     } else if (adresy.length === 1) {
       const [a] = await adresyUBodu(adresy[0].location.y, adresy[0].location.x, 1);
       await zobrazBudovu(a, null, { jak: "adresa zadaná uživatelem", jistota: "jistá", start });
