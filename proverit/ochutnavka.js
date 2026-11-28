@@ -24,7 +24,7 @@ const OCH_UAP_VRSTVY = "all:2,3,4,5,6,7,8,9,10,12,13,14,15,16,17,18,19,21,22,23,
 // Celá ČR po dlaždicích 0,2° × 0,3° (cca 22 × 22 km, 28. 11. 2026; dřív soubory po krajích): prohlížeč stáhne jen dlaždice
 // v okruhu 3 km od domu. Chybějící dlaždice (404) = žádná místa (les, hranice státu). Rozměr musí sedět s test/vybavenost.py.
 const OCH_DLAZDICE = [0.2, 0.3];
-const OCH_VYBAVENOST_VERZE = 1;
+const OCH_VYBAVENOST_VERZE = 2;
 const ochVybavenostSliby = {};
 const OCH_VYBAVENOST = (klic) => (ochVybavenostSliby[klic] ||= fetch(`/proverit/vybavenost/${klic}.json?v=${OCH_VYBAVENOST_VERZE}`).then((r) => {
   if (r.status === 404) return {};
@@ -304,12 +304,13 @@ function ochutnavkaOblasti(dum, rodinny = true, oblast = "praha", obec = "") {
     }
     const zaokr = (d) => d < 100 ? `${Math.max(10, Math.round(d / 10) * 10)} m` : d < 1000 ? `${Math.round(d / 50) * 50} m`
       : `${(Math.round(d / 100) / 10).toLocaleString("cs-CZ")} km`;
-    const vzd = (n) => n in nej ? zaokr(nej[n]) : "dál než 3 km";
+    // Bez místa do 3 km „v mapě do 3 km není“, ne „dál než 3 km“: OpenStreetMap v ČR chybí asi třetina školek (audit 28. 11. 2026).
+    const vzd = (n) => n in nej ? zaokr(nej[n]) : "v mapě do 3 km není";
     // Rozšířeno 21. 11. 2026 (recenze): lékárna, hřiště nebo park a druh dopravy (metro, vlak, tramvaj, autobus).
     const zakl = ["potraviny", "škola", "školka", "lékárna", "hřiště nebo park"].map((n) => `${n} ${vzd(n)}`).join(" · ");
     const doprava = ["metro", "vlak", "tramvaj", "autobus"].filter((n) => (nej[n] ?? 1e9) <= 1000).map((n) => `${n} ${zaokr(nej[n])}`);
     const zastavka = Math.min(...["metro", "vlak", "tramvaj", "autobus"].map((n) => nej[n] ?? 1e9));
-    const text = `${zakl} · doprava: ${doprava.length ? doprava.join(", ") : `nejbližší zastávka ${zastavka < 1e9 ? zaokr(zastavka) : "dál než 3 km"}`}`;
+    const text = `${zakl} · doprava: ${doprava.length ? doprava.join(", ") : `nejbližší zastávka ${zastavka < 1e9 ? zaokr(zastavka) : "v mapě do 3 km není"}`}`;
     // Barva (Petr 21. 11. 2026, Zvánovice): pozor, když je daleko obchod nebo zastávka (nad 1,5 km), nebo když jsou
     // aspoň 3 z 5 základních míst (potraviny, škola, školka, lékárna, zastávka) dál než 1 km. Riziko nikdy – je to
     // vlastnost místa, kterou kupující volí, ne vada nemovitosti.

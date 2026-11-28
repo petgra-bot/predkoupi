@@ -63,22 +63,51 @@ function variantyAdresy(text) {
   return { varianty: [...new Set(v.filter(Boolean))], praha: !!m, cislo: m?.[1], casti };
 }
 
+// Leží adresa v obci nebo části obce, kterou uživatel napsal? Bez diakritiky; „Říčany u Prahy“ sedí na „…, 25101 Říčany“.
+function vZadaneObci(adresa, casti) {
+  const a = bezDiakritiky(adresa);
+  const obce = adresa.split(",").slice(1).map((x) => bezDiakritiky(x.replace(/^\s*\d{3}\s?\d{2}\s+/, "").trim())).filter((x) => x.length >= 3);
+  return casti.some((x) => { const c = bezDiakritiky(x); return a.includes(c) || obce.some((o) => c.includes(o)); });
+}
+
 // Postupně zkouší varianty; z výsledků nechá Prahu (pokud ji uživatel napsal) a podle části obce nebo čísla obvodu zúží.
+// Celá ČR (audit 28. 11. 2026): když uživatel napsal obec a geokodér vrátí jen adresy jinde („tř. Tomáše Bati 100, Zlín“ →
+// Otrokovice), zkusí další varianty a nakonec vrátí výsledek s příznakem mimoObec – web pak nic nevybere sám.
 async function geokodujChytre(text) {
   const { varianty, praha, cislo, casti } = variantyAdresy(text);
+  let mimo = null;
   for (const q of varianty) {
     let kand = (await geokoduj(q, 10)).filter((c) => c.attributes.Type === "AdresniMisto");
     if (praha) kand = kand.filter((c) => /Praha/.test(c.address));
     if (!kand.length) continue;
-    const podleCasti = kand.filter((c) => casti.some((x) => c.address.toLowerCase().includes(x.toLowerCase())));
-    if (podleCasti.length) kand = podleCasti;
-    else if (cislo && kand.length > 1) {
+    const podleCasti = kand.filter((c) => vZadaneObci(c.address, casti));
+    if (podleCasti.length) return podleCasti;
+    if (casti.length) { mimo ||= kand; continue; }
+    if (cislo && kand.length > 1) {
       const podleCisla = kand.filter((c) => new RegExp(`Praha ${cislo}$`).test(c.address));
       if (podleCisla.length) kand = podleCisla;
     }
     return kand;
   }
-  return [];
+  return mimo ? Object.assign(mimo, { mimoObec: true }) : [];
+}
+
+// Adresa v zadané obci neexistuje: nabídnout domy v téže ulici v té obci (nejbližší čísla), pak stejnou adresu jinde.
+async function nabidniMimoObec(text, jinde) {
+  const { casti } = variantyAdresy(text);
+  const zadano = text.split(",")[0].trim();
+  const ulice = zadano.replace(/\s+(č\.\s?ev\.\s*)?\d+[\d/a-z]*$/i, "").trim();
+  const cislo = parseInt(zadano.match(/(\d+)[\d/a-z]*$/i)?.[1] || "0", 10);
+  const obec = casti[casti.length - 1] || "";
+  const cisla = (a) => (a.adresa.split(",")[0].match(/\d+/g) || []).map(Number);
+  const vUlici = ulice && obec && ulice !== zadano ? (await adresyVUlici(ulice, obec).catch(() => []))
+    .sort((a, b) => Math.min(...cisla(a).map((n) => Math.abs(n - cislo))) - Math.min(...cisla(b).map((n) => Math.abs(n - cislo)))).slice(0, 6) : [];
+  const ostatni = (await Promise.all(jinde.slice(0, 4).map(async (c) => (await adresyUBodu(c.location.y, c.location.x, 1))[0]))).filter(Boolean);
+  const seznam = [...vUlici, ...ostatni];
+  seznam.forEach((a) => { a.vzdalenost = null; });
+  nabidni(seznam, `Tuto adresu v obci ${obec} jsme nenašli`,
+    `${esc(zadano)} v obci ${esc(obec)} v registru adres není.` + (vUlici.length ? ` Vyberte dům v ulici ${esc(ulice)} v obci ${esc(obec)}` : " Vyberte správnou adresu")
+    + (ostatni.length ? (vUlici.length ? ", nebo stejnou adresu v jiné obci (dole)." : " – stejné číslo jsme našli jen v jiných obcích.") : "."), null);
 }
 
 async function adresniMista(where) {
@@ -765,6 +794,8 @@ async function overit(e) {
       $("vysledek").innerHTML = karta("chyba", "Adresu se nepodařilo najít",
         `<p>V katastru jsme takovou adresu nenašli. Napište ji prosím jako na dopise – ulice, číslo domu a obec nebo část obce
         (např. Karlická 910/49, Radotín). Jednodušší je vložit odkaz na inzerát.</p>`);
+    } else if (adresy.mimoObec) {
+      await nabidniMimoObec(text, adresy);
     } else if (adresy.length === 1) {
       const [a] = await adresyUBodu(adresy[0].location.y, adresy[0].location.x, 1);
       await zobrazBudovu(a, null, { jak: "adresa zadaná uživatelem", jistota: "jistá", start });

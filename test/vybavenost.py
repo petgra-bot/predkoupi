@@ -81,6 +81,20 @@ class Sber(osmium.SimpleHandler):
         if body:
             self._pridej(d, sum(b[0] for b in body) / len(body), sum(b[1] for b in body) / len(body))
 
+    def area(self, a):
+        """Multipolygony (relace) – větší areály škol a obchodů; uzavřené cesty už zpracovala way() (audit 28. 11. 2026)."""
+        if a.from_way():
+            return
+        d = druh(a.tags)
+        if not d:
+            return
+        try:
+            body = [(n.lat, n.lon) for r in a.outer_rings() for n in r if n.location.valid()]
+        except osmium.InvalidLocationError:
+            return
+        if body:
+            self._pridej(d, sum(b[0] for b in body) / len(body), sum(b[1] for b in body) / len(body))
+
 
 def main():
     s = Sber()
